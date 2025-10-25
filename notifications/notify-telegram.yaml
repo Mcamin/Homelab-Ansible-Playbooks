@@ -1,0 +1,85 @@
+---
+# 🧩 Playbook: notify_telegram.yml
+# 📘 Description:
+# This Ansible playbook demonstrates how to send **Telegram notifications**
+# using the official Telegram Bot API and Ansible’s built-in `uri` module.
+#
+# 📖 Documentation:
+# Telegram Bot API Reference:
+# https://core.telegram.org/bots/api#sendmessage
+#
+# This example shows how to:
+# - Configure a Telegram bot
+# - Obtain your bot token and chat ID
+# - Send formatted Markdown messages directly from Ansible playbooks
+#
+# 🧠 Typical Use Cases:
+# - System monitoring alerts (e.g. disk space, reboot required)
+# - Playbook success/failure notifications
+# - Deployment or backup confirmations
+#
+# ⚙️ Prerequisites:
+# 1. Create a Telegram bot using **@BotFather**
+#    - Send `/start`, then `/newbot`, follow the prompts.
+#    - BotFather will return your **bot token**:
+#      Example: `123456789:ABCDefGhIjKlmNoPQRstuVWxyz`
+#
+# 2. Get your chat ID:
+#    - Send a message to your new bot in Telegram.
+#    - Open this URL in a browser (replace <TOKEN>):
+#      https://api.telegram.org/bot<TOKEN>/getUpdates
+#    - In the JSON response, look for `"chat": {"id": <YOUR_CHAT_ID>}`.
+#
+# 3. (Recommended) Store your credentials as environment variables or Semaphore secrets:
+#    TELEGRAM_BOT_TOKEN
+#    TELEGRAM_CHAT_ID
+#
+# 💡 Security Note:
+# Never commit your Telegram token or chat ID directly to source control.
+# Store them as environment variables, encrypted variables, or in your CI/CD secret store.
+#
+# ✅ Example Command:
+# ansible-playbook -i inventory.ini playbooks/common/notify_telegram.yml
+
+- name: Notify Telegram
+  hosts: "{{ my_hosts | d([]) }}"
+  gather_facts: no
+
+  vars:
+    # The name shown as sender of the notification
+    notify_telegram_username: "Ansible Bot"
+
+    # Telegram Bot credentials
+    # Retrieve securely from environment or Semaphore secrets.
+    telegram_bot_token: "{{ lookup('env', 'TELEGRAM_BOT_TOKEN') }}"
+    telegram_chat_id: "{{ lookup('env', 'TELEGRAM_CHAT_ID') }}"
+
+    # The message content (supports Markdown formatting)
+    telegram_message: |-
+      ⚙️ *Message from {{ inventory_hostname }}* by _Ansible_ 🤖
+      This is a test notification.
+      You can use **bold**, _italic_, `code`, and even [links](https://core.telegram.org/bots/api#formatting-options).
+
+    # The host that sends the notification
+    telegram_send_from_host: localhost
+
+  tasks:
+    - name: Validate Telegram credentials
+      ansible.builtin.assert:
+        that:
+          - telegram_bot_token is match('^[0-9]+:[A-Za-z0-9_-]+$')
+          - telegram_chat_id | length > 0
+        fail_msg: "❌ Invalid Telegram configuration. Please check TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."
+
+    - name: Send Telegram message
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "Markdown"
+        status_code: 200
+      delegate_to: "{{ telegram_send_from_host }}"
+      when: telegram_message | length > 0
