@@ -2,20 +2,20 @@
 # 🧩 Playbook: inst-docker-ubuntu.yaml
 # 📘 Description:
 # Installs the latest stable Docker Engine, CLI, and related components on Ubuntu-based systems.
-# The playbook adds Docker’s official GPG key and repository, installs required dependencies,
-# and ensures all necessary Docker packages (including Buildx and Compose plugins) are present.
+# The playbook adds Docker’s official GPG key and repository cleanly (removing any conflicting entries),
+# installs required dependencies, and ensures all Docker packages (including Buildx and Compose plugins)
+# are installed and up to date.
 #
 # 🔧 Notes:
 # - Designed for Debian/Ubuntu systems using `apt`.
-# - Adds Docker’s official repository from `https://download.docker.com/linux/ubuntu`.
-# - Installs `docker-ce`, `docker-buildx-plugin`, and `docker-compose-plugin`.
+# - Compatible with Ubuntu 20.04 (Focal), 22.04 (Jammy), and 24.04 (Noble).
+# - Automatically removes old repository definitions to prevent "Conflicting values set for option Signed-By" errors.
+# - Uses the modern keyring path `/etc/apt/keyrings/docker.gpg` per Docker’s 2024 installation guidelines.
 # - Requires root/sudo privileges.
-# - Compatible with modern Ubuntu releases (20.04, 22.04, 24.04).
-# - The default architecture is `amd64` — modify the repository definition if using ARM or other architectures.
 #
 # ⚙️ Requirements:
-# - Internet access from the target machine.
-# - Supported Ubuntu release (e.g., Jammy, Noble, Focal).
+# - Internet access from the target host.
+# - Supported Ubuntu release with valid `lsb_release -cs` codename.
 #
 # 🧠 Example usage:
 # ansible-playbook -i inventory.ini ./docker/inst-docker-ubuntu.yaml -e "target_group=DockerServers"
@@ -46,11 +46,22 @@
           - software-properties-common
         update_cache: true
 
+    - name: Remove conflicting old Docker repository files (if present)
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/docker.list
+        state: absent
+
+    - name: Ensure Docker keyrings directory exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
     - name: Add Docker GPG key
-      ansible.builtin.apt_key:
+      ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
-        keyring: /etc/apt/keyrings/docker.gpg
+        dest: /etc/apt/keyrings/docker.gpg
+        mode: '0644'
 
     - name: Add Docker repository
       ansible.builtin.apt_repository:
@@ -61,10 +72,21 @@
           {{ ansible_lsb.codename | lower }} stable
         state: present
 
+    - name: Update package index
+      ansible.builtin.apt:
+        update_cache: true
+
     - name: Install Docker Engine and plugins
       ansible.builtin.apt:
         name:
           - docker-ce
           - docker-buildx-plugin
           - docker-compose-plugin
-        update_cache: true
+        state: present
+        update_cache: false
+
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
