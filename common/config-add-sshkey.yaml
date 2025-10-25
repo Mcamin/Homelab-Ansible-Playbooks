@@ -1,9 +1,42 @@
 ---
 # 🧩 Playbook: config-add-sshkey.yaml
+# 📘 Description:
+#   Creates (if necessary) a user on target hosts, installs an SSH public key
+#   into that user’s `~/.ssh/authorized_keys`, and prepares the account for
+#   passwordless SSH authentication.
+#
+#   This playbook is typically the first step in provisioning automation access.
+#   It does **not** modify sudo permissions automatically — see below.
+#
+# 🔧 Notes:
+#   - Targets hosts defined by `target_group` (defaults to none).
+#   - Automatically creates the user and its home directory if missing.
+#   - Reads the SSH public key from the control node file `~/.ssh/id_rsa.pub`
+#     (or another file if specified via `ssh_key_path`).
+#   - Requires the connection user to have sudo privileges (`become: true`).
+#
+# ⚙️ To enable passwordless sudo for the created user:
+#   Replace `<username>` with the actual account name, then run once on each host:
+#
+#       echo "<username> ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/<username>
+#       sudo chmod 440 /etc/sudoers.d/<username>
+#
+#   This grants the user full sudo rights without requiring a password,
+#   which is necessary for Ansible and Semaphore to execute privileged tasks.
+#
+# 🧠 Example usage:
+#   ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml \
+#     -e "target_group=UbuntuServers ssh_user=ansible ssh_key_path=~/.ssh/id_rsa.pub"
+#
+# 🧱 Variables:
+#   - ssh_user: The username to configure (default: ubuntu)
+#   - ssh_key_path: Path to the public key on the control node
+#   - target_group: Inventory group or hosts to apply changes to
 
-- name: Configure SSH key and passwordless sudo for a specific user
+- name: Create user and configure SSH key for it
   hosts: "{{ target_group | d([]) }}"
   become: true
+
   vars:
     ssh_user: "{{ ssh_user | default('ubuntu') }}"
     ssh_key_path: "{{ ssh_key_path | default('~/.ssh/id_rsa.pub') }}"
@@ -29,14 +62,3 @@
         user: "{{ ssh_user }}"
         key: "{{ lookup('file', ssh_key_path) }}"
         state: present
-
-
-
-    - name: Configure passwordless sudo for the specific user in /etc/sudoers
-      ansible.builtin.lineinfile:
-        path: /etc/sudoers
-        state: present
-        regexp: "^{{ ssh_user }} "
-        line: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL"
-        validate: '/usr/sbin/visudo -cf %s'
-
