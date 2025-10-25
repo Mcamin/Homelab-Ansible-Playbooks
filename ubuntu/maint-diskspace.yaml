@@ -34,7 +34,7 @@
           text: "⚠️ *Alert:* Disk usage on `{{ inventory_hostname }}` is at {{ disk_usage.stdout }} — consider cleaning up space."
           parse_mode: "Markdown"
         status_code: 200
-      when: disk_usage.stdout[:-1] | int > 50
+      when: disk_usage.stdout[:-1] | int > 80
 
 #   - name: Send discord message when disk space is over 80%
 #     uri:
