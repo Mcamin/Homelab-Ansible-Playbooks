@@ -1,91 +1,15 @@
----
-# 🧩 Playbook: config-add-sshkey.yaml
-# 📘 Description:
-#   Creates (if necessary) a user on target hosts, installs an SSH public key
-#   into that user’s `~/.ssh/authorized_keys`, and grants passwordless sudo access
-#   specifically for that user via a separate configuration file under `/etc/sudoers.d/`.
-#   This ensures secure, key-based access and controlled administrative privileges
-#   for automation or maintenance.
-#
-# 🔧 Notes:
-#   - Targets hosts defined by `target_group` (defaults to none).
-#   - Automatically creates the user and home directory if it does not exist.
-#   - Reads the SSH public key from the local control node file `~/.ssh/id_rsa.pub`
-#     (or another file if specified).
-#   - Grants passwordless sudo only for the created or specified user, not for all `sudo` members.
-#   - Requires root privileges (`become: true`).
-#
-# 🧠 Example usage:
-#   ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml \
-#     -e "target_group=UbuntuServers ssh_user=ahmed ssh_key_path=~/.ssh/id_rsa.pub"
-#
-# 🧱 Variables:
-#   - ssh_user: The username to configure (default: ansible)
-#   - ssh_key_path: Path to the public key on the control node (default: ~/.ssh/id_rsa.pub)
-#   - target_group: Inventory group or hosts to apply changes to
-
-- name: Check current effective user and permissions on /etc/sudoers.d
-  become: true
-  ansible.builtin.shell: |
-    echo "Current user: $(whoami)"
-    echo "Groups: $(id)"
-    echo "Directory permissions for /etc/sudoers.d:"
-    ls -ld /etc/sudoers.d
-    echo "Can we write there?"
-    test -w /etc/sudoers.d && echo "✅ Writable" || echo "❌ Not writable"
-  register: sudo_debug
-
-- name: Display debug info
-  ansible.builtin.debug:
-    var: sudo_debug.stdout_lines
-
-
-- name: Configure SSH key and passwordless sudo for a specific user
-  hosts: "{{ target_group | d([]) }}"
-  become: true     # <— enables sudo for privileged actions
-
-  vars:
-    ssh_user: "{{ ssh_user | default('ubuntu') }}"
-    ssh_key_path: "{{ ssh_key_path | default('~/.ssh/id_rsa.pub') }}"
-
-  pre_tasks:
-    - name: Ensure /etc/sudoers.d exists and is owned by root
+    # 🧪 Debug: verify escalation
+    - name: Check current effective user and permissions on /etc/sudoers.d
       become: true
-      ansible.builtin.file:
-        path: /etc/sudoers.d
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
+      shell: |
+        echo "Current user: $(whoami)"
+        echo "Groups: $(id)"
+        echo "Directory permissions for /etc/sudoers.d:"
+        ls -ld /etc/sudoers.d
+        echo "Can we write there?"
+        test -w /etc/sudoers.d && echo "✅ Writable" || echo "❌ Not writable"
+      register: sudo_debug
 
-  tasks:
-    - name: Create user if not present
-      ansible.builtin.user:
-        name: "{{ ssh_user }}"
-        state: present
-        create_home: true
-        shell: /bin/bash
-
-    - name: Create .ssh directory
-      ansible.builtin.file:
-        path: "/home/{{ ssh_user }}/.ssh"
-        state: directory
-        owner: "{{ ssh_user }}"
-        group: "{{ ssh_user }}"
-        mode: "0700"
-
-    - name: Install public key for the specified user
-      ansible.posix.authorized_key:
-        user: "{{ ssh_user }}"
-        state: present
-        key: "{{ lookup('file', ssh_key_path) }}"
-
-    - name: Configure passwordless sudo for the specific user
-      become: true
-      ansible.builtin.copy:
-        dest: "/etc/sudoers.d/90_{{ ssh_user }}_nopasswd"
-        content: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL\n"
-        owner: root
-        group: root
-        mode: '0440'
-        validate: /usr/sbin/visudo -cf %s
+    - name: Display debug info
+      debug:
+        var: sudo_debug.stdout_lines
