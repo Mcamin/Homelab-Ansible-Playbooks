@@ -1,0 +1,36 @@
+---
+# 🧩 Playbook: install_core_vm_packages.yml
+# 📘 Description:
+# Installs essential packages for virtual machines running on Proxmox or other QEMU/KVM-based
+# hypervisors. It includes system monitoring, network file system support, and the QEMU guest
+# agent for hypervisor integration. Ensures the qemu-guest-agent service is enabled and running.
+#
+# 🔧 Notes:
+# - Intended for virtual machines (not physical servers).
+# - The `prometheus-node-exporter` provides system metrics for monitoring.
+# - The `nfs-common` package enables NFS client functionality.
+# - The `qemu-guest-agent` allows communication between the VM and its hypervisor.
+# - Requires sudo/root privileges.
+# - Compatible with Debian/Ubuntu systems using `apt`.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./proxmox/install_core_vm_packages.yml -e "target_group=VMs"
+
+- name: Install core packages for virtual machines
+  hosts: "{{ target_group | d('all') }}"
+  become: true
+
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - prometheus-node-exporter
+          - nfs-common
+          - qemu-guest-agent
+        update_cache: true
+
+    - name: Start guest qemu-guest-agent
+      ansible.builtin.service:
+        name: qemu-guest-agent
+        state: started
+        enabled: true

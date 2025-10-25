@@ -1,4 +1,21 @@
 ---
+# 🧩 Playbook: check_reboot_required.yml
+# 📘 Description:
+# Checks if any target hosts require a system reboot (based on the presence of /run/reboot-required)
+# and sends a Telegram notification if a reboot is needed. This is commonly used after
+# package upgrades or kernel updates on Ubuntu/Debian systems.
+#
+# 🔧 Notes:
+# - Works on systems that create the `/run/reboot-required` file (Ubuntu/Debian).
+# - Requires privilege escalation (sudo/root).
+# - Telegram credentials (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID) should be set
+#   as environment variables or stored securely in Semaphore secrets.
+# - Uses the Telegram Bot API to deliver alerts directly to your chat.
+# - You can modify the message or notification channel as needed.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./common/check_reboot_required.yml -e "target_group=UbuntuServers"
+
 - name: Check if system reboot is required
   hosts: "{{ target_group | d('all') }}"
   become: true

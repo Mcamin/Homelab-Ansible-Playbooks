@@ -1,4 +1,20 @@
 ---
+# 🧩 Playbook: update_upgrade_apt.yml
+# 📘 Description:
+# Updates and upgrades all packages on Debian/Ubuntu-based systems using the `apt` package manager.
+# The playbook refreshes the package cache and performs a full system upgrade (dist-upgrade),
+# ensuring that all dependencies and kernel updates are applied.
+#
+# 🔧 Notes:
+# - Designed for Debian and Ubuntu hosts (checks if the package manager is `apt`).
+# - Can be safely applied to all hosts that use apt without modifying non-apt systems.
+# - Requires privilege escalation (sudo/root) to execute package management tasks.
+# - Consider pairing this with the `check_reboot_required.yml` playbook to verify
+#   if a reboot is needed after the upgrade.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./ubuntu/update_upgrade_apt.yml -e "target_group=UbuntuServers"
+
 - name: Update and upgrade apt packages
   hosts: "{{ target_group | d('all') }}"
 

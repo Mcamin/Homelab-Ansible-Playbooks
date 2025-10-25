@@ -1,4 +1,21 @@
 ---
+# 🧩 Playbook: install_qemu_guest_agent.yml
+# 📘 Description:
+# Installs the QEMU Guest Agent package on virtual machines to enable communication
+# between the guest OS and its hypervisor (e.g., Proxmox, KVM, or QEMU).
+# This agent allows clean shutdowns, IP address reporting, and consistent snapshots
+# from the hypervisor interface.
+#
+# 🔧 Notes:
+# - Should only be installed on virtual machines (not on bare-metal hosts).
+# - Requires sudo/root privileges.
+# - Compatible with Debian/Ubuntu systems using `apt`.
+# - To fully activate guest-agent features in Proxmox, enable “QEMU Guest Agent”
+#   in the VM’s hardware settings after running this playbook.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini playbooks/proxmox/install_qemu_guest_agent.yml -e "target_group=VMs"
+
 - name: Install qemu-guest-agent package
   hosts: "{{ target_group | d('all') }}"
   become: true

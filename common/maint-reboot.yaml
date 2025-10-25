@@ -1,0 +1,24 @@
+---
+# 🧩 Playbook: reboot_machine.yml
+# 📘 Description:
+# Performs a controlled reboot of one or more target hosts.
+# This playbook uses Ansible’s built-in reboot module to safely restart systems
+# and wait until they come back online within a defined timeout period.
+#
+# 🔧 Notes:
+# - Targets hosts defined by the `target_group` variable (defaults to all if not provided).
+# - Requires privilege escalation (sudo/root access).
+# - The default reboot timeout is set to 3600 seconds (1 hour) — adjust if necessary.
+# - Useful after system updates or maintenance tasks that require a restart.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./common/reboot_machine.yml -e "target_group=UbuntuServers"
+
+- name: Reboot machine
+  hosts: "{{ target_group | d('all') }}"
+  become: true
+
+  tasks:
+    - name: Reboot machine
+      ansible.builtin.reboot:
+        reboot_timeout: 3600

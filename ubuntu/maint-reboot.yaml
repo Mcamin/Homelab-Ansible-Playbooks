@@ -1,9 +1,0 @@
----
-- name: Reboot machine
-  hosts: "{{ target_group | d('all') }}"
-  become: true
-
-  tasks:
-    - name: Reboot machine
-      ansible.builtin.reboot:
-        reboot_timeout: 3600

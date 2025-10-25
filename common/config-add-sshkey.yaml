@@ -1,0 +1,37 @@
+---
+# 🧩 Playbook: add_ssh_key.yml
+# 📘 Description:
+# Adds an SSH public key to the specified user's `~/.ssh/authorized_keys` on target hosts
+# and configures passwordless sudo for the sudo group by adding a dedicated configuration
+# file under `/etc/sudoers.d/`. This approach avoids direct edits to `/etc/sudoers`
+# and provides a safer, more maintainable setup.
+#
+# 🔧 Notes:
+# - Targets hosts defined by `target_group` (defaults to all).
+# - Uses the current control-machine user (from `USER` environment variable)
+#   as the remote account to which the SSH key will be added.
+# - The public key is read from the local control node file `~/.ssh/id_rsa.pub`.
+# - Requires sudo/root privileges.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./common/add_ssh_key.yml -e "target_group=UbuntuServers"
+
+- name: Add ssh key
+  hosts: "{{ target_group | d('all') }}"
+  become: true
+
+  tasks:
+    - name: Install public key for the user
+      ansible.posix.authorized_key:
+        user: "{{ lookup('env', 'USER') }}"
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+    - name: Configure passwordless sudo for the sudo group
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/90_ansible_nopasswd
+        content: "%sudo ALL=(ALL) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
