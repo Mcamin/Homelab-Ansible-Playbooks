@@ -39,7 +39,7 @@
 # - Consider running Docker behind a VPN or SSH tunnel for an additional layer of security.
 
 - name: "Docker Certs enable"
-  hosts: "{{ target_group | d('all') }}"
+  hosts: "{{ target_group | d([]) }}"
   become: true
 
   vars:

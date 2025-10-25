@@ -38,7 +38,7 @@
 #   -H=tcp://your-server:2376 info
 
 - name: Docker Certs
-  hosts: "{{ target_group | d('all') }}"
+  hosts: "{{ target_group | d([]) }}"
   become: true
 
   vars:
