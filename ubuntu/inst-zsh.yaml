@@ -12,7 +12,7 @@
 # ansible-playbook -i inventory.ini ./ubuntu/inst-zsh.yaml -e "target_group=UbuntuServers"
 
 - name: Install zsh
-  hosts: "{{ target_group | default(omit) }}"
+  hosts: "{{ target_group | d([]) }}"
   become: true
   gather_facts: true
 
