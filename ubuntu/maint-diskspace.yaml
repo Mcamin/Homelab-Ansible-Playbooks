@@ -1,6 +1,11 @@
 ---
 - name: Check disk space
   hosts: "{{ target_group | d('all') }}"
+  gather_facts: no
+
+  vars:
+    telegram_bot_token: "{{ lookup('env', 'TELEGRAM_BOT_TOKEN') }}"
+    telegram_chat_id: "{{ lookup('env', 'TELEGRAM_CHAT_ID') }}"
 
   tasks:
     - name: Check disk space available
@@ -10,8 +15,24 @@
           df -Ph / | awk 'NR==2 {print $5}'
         executable: /bin/bash
       changed_when: false
-      check_mode: false
       register: disk_usage
+
+    - name: Display disk usage
+      ansible.builtin.debug:
+        msg: "Disk usage on {{ inventory_hostname }}: {{ disk_usage.stdout }}"
+
+
+    - name: Send Telegram alert if disk usage > 80%
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "⚠️ *Alert:* Disk usage on `{{ inventory_hostname }}` is at {{ disk_usage.stdout }} — consider cleaning up space."
+          parse_mode: "Markdown"
+        status_code: 200
+      when: disk_usage.stdout[:-1] | int > 80
 
 #   - name: Send discord message when disk space is over 80%
 #     uri:
