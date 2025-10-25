@@ -24,6 +24,21 @@
 #   - ssh_key_path: Path to the public key on the control node (default: ~/.ssh/id_rsa.pub)
 #   - target_group: Inventory group or hosts to apply changes to
 
+- name: Check current effective user and permissions on /etc/sudoers.d
+  become: true
+  ansible.builtin.shell: |
+    echo "Current user: $(whoami)"
+    echo "Groups: $(id)"
+    echo "Directory permissions for /etc/sudoers.d:"
+    ls -ld /etc/sudoers.d
+    echo "Can we write there?"
+    test -w /etc/sudoers.d && echo "✅ Writable" || echo "❌ Not writable"
+  register: sudo_debug
+
+- name: Display debug info
+  ansible.builtin.debug:
+    var: sudo_debug.stdout_lines
+
 
 - name: Configure SSH key and passwordless sudo for a specific user
   hosts: "{{ target_group | d([]) }}"
