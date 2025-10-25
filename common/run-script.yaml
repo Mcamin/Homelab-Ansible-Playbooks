@@ -36,13 +36,16 @@
 # 🧠 Example usage:
 #  ansible-playbook -i inventory.ini ./common/run-script.yaml -e "target_group=UbuntuServers"
 
+
+
+
 - name: Run remote shell script and send Telegram notification
   hosts: "{{ target_group | d([]) }}"
   become: "{{ use_become | default(false) }}"
   vars:
     script_path: "{{ script_path }}"
-    telegram_token: "{{ telegram_token }}"
-    telegram_chat_id: "{{ telegram_chat_id }}"
+    telegram_bot_token: "{{ lookup('env', 'TELEGRAM_BOT_TOKEN') }}"
+    telegram_chat_id: "{{ lookup('env', 'TELEGRAM_CHAT_ID') }}"
 
   tasks:
     # 🔍 Step 1: Verify that the script exists
@@ -68,7 +71,7 @@
     # 🟢 Step 4: Send Telegram notification (success)
     - name: Send Telegram notification (success)
       community.general.telegram:
-        token: "{{ telegram_token }}"
+        token: "{{ telegram_bot_token }}"
         chat_id: "{{ telegram_chat_id }}"
         msg: |
           ✅ *Script executed successfully on {{ inventory_hostname }}*
@@ -82,7 +85,7 @@
     # 🔴 Step 5: Send Telegram notification (failure)
     - name: Send Telegram notification (failure)
       community.general.telegram:
-        token: "{{ telegram_token }}"
+        token: "{{ telegram_bot_token }}"
         chat_id: "{{ telegram_chat_id }}"
         msg: |
           ❌ *Script execution FAILED on {{ inventory_hostname }}*
