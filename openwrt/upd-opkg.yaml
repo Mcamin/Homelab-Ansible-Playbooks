@@ -1,5 +1,5 @@
 ---
-- name: Update and check OpenWrt router (no Python required)
+- name: Update and check OpenWrt router safely
   hosts: openwrt
   gather_facts: no
   become: yes
@@ -9,26 +9,26 @@
       ansible.builtin.raw: opkg update
       register: update_result
 
-    - name: List upgradable packages
-      ansible.builtin.raw: opkg list-upgradable
+    - name: Get list of upgradable packages
+      ansible.builtin.raw: opkg list-upgradable | cut -d ' ' -f1
       register: upgradable
 
     - name: Show upgradable packages
       ansible.builtin.debug:
         msg: "{{ upgradable.stdout_lines | default(['No packages need upgrading.']) }}"
 
-    - name: Upgrade all packages if needed
-      ansible.builtin.raw: opkg upgrade
+    - name: Upgrade all upgradable packages (if any)
+      ansible.builtin.raw: opkg upgrade {{ upgradable.stdout_lines | join(' ') }}
       when: upgradable.stdout is defined and upgradable.stdout != ""
       register: upgrade_result
 
-    - name: Check if reboot is required (based on kernel or libc upgrade)
+    - name: Check if a reboot is likely needed (kernel/libc updated)
       ansible.builtin.set_fact:
         reboot_needed: "{{ 'libc' in upgradable.stdout or 'kernel' in upgradable.stdout }}"
       when: upgradable.stdout is defined
 
-    - name: Reboot if needed
-      ansible.builtin.raw: sleep 2 && reboot
+    - name: Reboot router if needed
+      ansible.builtin.raw: sleep 3 && reboot
       when: reboot_needed | default(false)
       async: 0
       poll: 0
@@ -37,6 +37,6 @@
       ansible.builtin.wait_for:
         host: "{{ inventory_hostname }}"
         port: 22
-        delay: 15
-        timeout: 180
+        delay: 20
+        timeout: 300
       when: reboot_needed | default(false)
