@@ -1,23 +1,26 @@
 ---
 # 🧩 Playbook: inst-docker-ubuntu.yaml
 # 📘 Description:
-# Installs or updates Docker Engine safely on Ubuntu while handling existing
-# Docker repositories that may use different Signed-By keys (.asc or .gpg).
+# Installs or updates Docker Engine safely on Ubuntu, avoiding repo/key conflicts.
+# Automatically handles systems with existing Docker installations.
+# Adds a non-root user to the docker group for sudo-free use.
 #
-# 🧠 Logic:
-# 1. Check if a Docker APT repository exists.
-# 2. If found, reuse its Signed-By key (avoid conflicts).
-# 3. If not found, add the official Docker repo using the modern .gpg key.
-# 4. Clean any conflicting sources to ensure APT consistency.
-#
-# 🧩 Works on Ubuntu 20.04, 22.04, and 24.04.
-# ⚙️ Requires sudo/root privileges and internet access.
+# 🧩 Works on Ubuntu 20.04, 22.04, 24.04.
+# ⚙️ Requires sudo/root privileges.
 
-- name: Install Docker with repo conflict handling
+- name: Install Docker with conflict handling
   hosts: "{{ target_group | d([]) }}"
   become: true
+  vars:
+    docker_user: "{{ ansible_user | default('ubuntu') }}"
 
   tasks:
+    - name: Check if Docker is already installed
+      ansible.builtin.shell: |
+        command -v docker >/dev/null 2>&1 && echo "yes" || echo "no"
+      register: docker_installed
+      changed_when: false
+
     - name: Install Docker dependencies
       ansible.builtin.apt:
         name:
@@ -50,10 +53,11 @@
       ansible.builtin.shell: |
         if grep -q "docker.asc" /etc/apt/sources.list.d/docker*.list 2>/dev/null && \
            grep -q "docker.gpg" /etc/apt/sources.list.d/docker*.list 2>/dev/null; then
+          echo "Removing conflicting Docker sources"
           rm -f /etc/apt/sources.list.d/docker*.list*
         fi
       args:
-        warn: false
+        executable: /bin/bash
 
     - name: Ensure Docker keyrings directory exists
       ansible.builtin.file:
@@ -70,7 +74,7 @@
         url: https://download.docker.com/linux/ubuntu/gpg
         dest: "{{ docker_key_path }}"
         mode: '0644'
-      when: existing_key_path.stdout | length == 0
+      when: existing_key_path.stdout | length == 0 and docker_installed.stdout == 'no'
 
     - name: Add Docker repository if missing
       ansible.builtin.apt_repository:
@@ -80,7 +84,7 @@
           https://download.docker.com/linux/ubuntu
           {{ ansible_lsb.codename | lower }} stable
         state: present
-      when: docker_repo_check.stdout | length == 0 or "'download.docker.com' not in docker_repo_check.stdout"
+      when: docker_repo_check.stdout | length == 0 and docker_installed.stdout == 'no'
 
     - name: Update apt cache
       ansible.builtin.apt:
@@ -99,3 +103,16 @@
         name: docker
         state: started
         enabled: true
+
+    - name: Add non-root user to Docker group
+      ansible.builtin.user:
+        name: "{{ docker_user }}"
+        groups: docker
+        append: true
+
+    - name: Display final status
+      ansible.builtin.debug:
+        msg: |
+          ✅ Docker installed and configured successfully.
+          🧑 User '{{ docker_user }}' added to Docker group.
+          🔁 You may need to log out and log back in for group changes to apply.
