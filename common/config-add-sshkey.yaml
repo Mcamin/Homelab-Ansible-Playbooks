@@ -24,16 +24,26 @@
 #   - ssh_key_path: Path to the public key on the control node (default: ~/.ssh/id_rsa.pub)
 #   - target_group: Inventory group or hosts to apply changes to
 
+
 - name: Configure SSH key and passwordless sudo for a specific user
   hosts: "{{ target_group | d([]) }}"
-  become: true
+  become: true     # <— enables sudo for privileged actions
 
   vars:
     ssh_user: "{{ ssh_user | default('ubuntu') }}"
     ssh_key_path: "{{ ssh_key_path | default('~/.ssh/id_rsa.pub') }}"
 
+  pre_tasks:
+    - name: Ensure /etc/sudoers.d exists and is owned by root
+      become: true
+      ansible.builtin.file:
+        path: /etc/sudoers.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
   tasks:
-    # 🧍 Step 1: Ensure user exists
     - name: Create user if not present
       ansible.builtin.user:
         name: "{{ ssh_user }}"
@@ -41,7 +51,6 @@
         create_home: true
         shell: /bin/bash
 
-    # 📂 Step 2: Ensure .ssh directory exists
     - name: Create .ssh directory
       ansible.builtin.file:
         path: "/home/{{ ssh_user }}/.ssh"
@@ -50,15 +59,14 @@
         group: "{{ ssh_user }}"
         mode: "0700"
 
-    # 🔑 Step 3: Install public key for SSH login
     - name: Install public key for the specified user
       ansible.posix.authorized_key:
         user: "{{ ssh_user }}"
         state: present
         key: "{{ lookup('file', ssh_key_path) }}"
 
-    # ⚙️ Step 4: Configure passwordless sudo (only for this user)
     - name: Configure passwordless sudo for the specific user
+      become: true
       ansible.builtin.copy:
         dest: "/etc/sudoers.d/90_{{ ssh_user }}_nopasswd"
         content: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL\n"
