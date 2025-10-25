@@ -1,12 +1,10 @@
 ---
 # 🧩 Playbook: inst-zsh.yaml
 # 📘 Description:
-# Installs the Z Shell (zsh) package on all or selected Ubuntu/Debian-based hosts.
-# Useful for customizing shell environments or setting zsh as the default shell
-# for users. This playbook updates the package cache and ensures zsh is present.
+# Installs the Z Shell (zsh) package on selected Ubuntu/Debian-based hosts.
 #
 # 🔧 Notes:
-# - Targets hosts specified via the `target_group` variable (defaults to all).
+# - Targets hosts specified via the `target_group` variable.
 # - Requires sudo privileges.
 # - Compatible with Debian/Ubuntu systems using `apt`.
 #
@@ -14,10 +12,16 @@
 # ansible-playbook -i inventory.ini ./ubuntu/inst-zsh.yaml -e "target_group=UbuntuServers"
 
 - name: Install zsh
-  hosts: "{{ target_group | d('all') }}"
+  hosts: "{{ target_group | default(omit) }}"
   become: true
+  gather_facts: true
 
   tasks:
+    - name: Fail if target_group is not defined
+      ansible.builtin.fail:
+        msg: "You must specify 'target_group' (e.g., -e 'target_group=UbuntuServers')"
+      when: target_group is not defined
+
     - name: Install zsh
       ansible.builtin.apt:
         name: zsh
