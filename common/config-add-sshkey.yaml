@@ -7,7 +7,7 @@
 # and provides a safer, more maintainable setup.
 #
 # 🔧 Notes:
-# - Targets hosts defined by `target_group` (defaults to all).
+# - Targets hosts defined by `target_group` (defaults to None).
 # - Uses the current control-machine user (from `USER` environment variable)
 #   as the remote account to which the SSH key will be added.
 # - The public key is read from the local control node file `~/.ssh/id_rsa.pub`.
@@ -17,7 +17,7 @@
 # ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml -e "target_group=UbuntuServers"
 
 - name: Add ssh key
-  hosts: "{{ target_group | d('all') }}"
+  hosts: "{{ target_group | d([]) }}"
   become: true
 
   tasks:

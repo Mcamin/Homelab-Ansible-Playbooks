@@ -1,7 +1,8 @@
 # 🧩 Ansible Playbooks Collection
 
 This repository contains a curated set of **Ansible playbooks** organized by system type and purpose.  
-Each category targets specific infrastructure components used in a homelab or production environment — such as Ubuntu servers, Proxmox hosts, Portainer setups, Docker services, and Checkmk monitoring.
+Each category targets specific infrastructure components used in a homelab or production environment — such as Ubuntu 
+servers, Proxmox hosts, Docker services, and Checkmk monitoring.
 
 ---
 
