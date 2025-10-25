@@ -1,0 +1,42 @@
+---
+# 🧩 Playbook: maint-docker-clean.yaml
+# 📘 Description:
+# Cleans up unused Docker images to free disk space while preserving active containers and volumes.
+# This playbook safely prunes **non-dangling** images — those not currently in use but still taking
+# up storage — without affecting running containers or attached data volumes.
+#
+# 🔧 Notes:
+# - Uses the `community.docker.docker_prune` module to handle cleanup.
+# - Only prunes images with `dangling=false`, meaning it removes **unused images**
+#   but keeps intermediate layers and active image references.
+# - Does **not** remove containers, networks, or volumes.
+# - Suitable for periodic Docker maintenance or cron-based cleanup jobs.
+# - Requires the `community.docker` collection (`ansible-galaxy collection install community.docker`).
+#
+# ⚙️ Requirements:
+# - Docker must be installed and running on the target system.
+# - The Ansible control node must have the `community.docker` collection installed.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./docker/maint-docker-clean.yaml -e "target_group=DockerServers"
+#
+# 🧩 To perform a full cleanup (including containers, networks, and volumes):
+# Change the module parameters to:
+# containers: true
+# networks: true
+# volumes: true
+# builder_cache: true
+
+- name: Clean Docker
+  hosts: "{{ target_group | d('all') }}"
+
+  tasks:
+    - name: Prune non-dangling Docker images
+      community.docker.docker_prune:
+        containers: false
+        images: true
+        images_filters:
+          dangling: false
+        networks: false
+        volumes: false
+        builder_cache: false

@@ -1,0 +1,191 @@
+---
+# 🧩 Playbook: docker-certs.yaml
+# 📘 Description:
+# Generates a complete Docker TLS certificate chain for secure Docker daemon (dockerd) communication.
+# The playbook creates a local Certificate Authority (CA), server, and client certificates with proper
+# SAN (Subject Alternative Name) entries for both hostname and IP address.
+#
+# The resulting certificates can be used to enable TLS authentication and encryption between Docker
+# clients and servers, allowing secure remote management with `--tlsverify` enabled.
+#
+# 🔧 Notes:
+# - Creates the certificate directory `/root/docker-certs` (default, configurable via `certs_path`).
+# - Prevents overwriting existing certificates — fails if any files already exist.
+# - Automatically extracts the host’s primary IP address for SAN entries.
+# - Uses OpenSSL commands executed via Ansible’s `command` and `shell` modules.
+# - All sensitive files are set to `0700` permissions.
+# - Works on any Linux host with `openssl` installed.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./docker/docker-certs.yaml -e "target_group=DockerServers"
+#
+# 🧩 Example configuration for Docker daemon:
+# Add these options to `/etc/docker/daemon.json`:
+# {
+#   "tls": true,
+#   "tlsverify": true,
+#   "tlscacert": "/root/docker-certs/ca.pem",
+#   "tlscert": "/root/docker-certs/server-cert.pem",
+#   "tlskey": "/root/docker-certs/server-key.pem"
+# }
+#
+# Then restart Docker:
+# systemctl restart docker
+#
+# 💡 To connect securely from client:
+# docker --tlsverify \
+#   --tlscacert=ca.pem --tlscert=cert.pem --tlskey=key.pem \
+#   -H=tcp://your-server:2376 info
+
+- name: Docker Certs
+  hosts: "{{ target_group | d('all') }}"
+  become: true
+
+  vars:
+    certs_path: "/root/docker-certs"
+    cert_validity_days: 3650
+    cn_domain: "your-domain.tld"
+
+  tasks:
+    - name: Check if docker certs are existing
+      ansible.builtin.stat:
+        path: "{{ certs_path }}"
+      register: certs_dir
+
+    - name: Create docker certs directory (if needed)
+      ansible.builtin.file:
+        path: "{{ certs_path }}"
+        state: directory
+        mode: '0700'
+      when: not certs_dir.stat.exists
+
+    - name: Check if docker certs directory is empty
+      ansible.builtin.command: ls -A "{{ certs_path }}"
+      register: certs_list
+      when: certs_dir.stat.exists
+      changed_when: false
+      ignore_errors: true
+
+    - name: Fail if docker certs already exist
+      ansible.builtin.fail:
+        msg: "Docker certificates already exist in {{ certs_path }}."
+      when: certs_list.stdout | default('') != ''
+
+    - name: Get machine's primary internal IP address from eth0
+      ansible.builtin.setup:
+      register: ip_address
+
+    - name: Set machine's primary internal IP address
+      ansible.builtin.set_fact:
+        ip_address: "{{ ip_address.ansible_facts.ansible_default_ipv4.address }}"
+
+    - name: Validate IP address format
+      ansible.builtin.assert:
+        that:
+          - ip_address is match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
+        fail_msg: "ip_address is not a valid IP address."
+        success_msg: "ip_address is a valid IP address."
+
+    - name: Generate CA private key
+      ansible.builtin.command:
+        cmd: openssl genrsa -out "{{ certs_path }}/ca-key.pem" 4096
+      args:
+        creates: "{{ certs_path }}/ca-key.pem"
+
+    - name: Generate CA certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl req -sha256 -new -x509
+          -subj "/CN={{ cn_domain }}"
+          -days "{{ cert_validity_days }}"
+          -key "{{ certs_path }}/ca-key.pem"
+          -out "{{ certs_path }}/ca.pem"
+      args:
+        creates: "{{ certs_path }}/ca.pem"
+
+    - name: Generate server private key
+      ansible.builtin.command:
+        cmd: openssl genrsa -out "{{ certs_path }}/server-key.pem" 4096
+      args:
+        creates: "{{ certs_path }}/server-key.pem"
+
+    - name: Generate server certificate signing request
+      ansible.builtin.command:
+        cmd: >
+          openssl req -sha256 -new
+          -subj "/CN={{ inventory_hostname }}"
+          -key "{{ certs_path }}/server-key.pem"
+          -out "{{ certs_path }}/server.csr"
+      args:
+        creates: "{{ certs_path }}/server.csr"
+
+    - name: Generate server certificate extension file
+      ansible.builtin.shell: |
+        echo "subjectAltName = DNS:{{ inventory_hostname }},IP:{{ ip_address }},IP:127.0.0.1" > "{{ certs_path }}/extfile.cnf"
+        echo "extendedKeyUsage = serverAuth" >> "{{ certs_path }}/extfile.cnf"
+      args:
+        creates: "{{ certs_path }}/extfile.cnf"
+
+    - name: Generate server certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl x509 -req -days "{{ cert_validity_days }}" -sha256
+          -in "{{ certs_path }}/server.csr"
+          -CA "{{ certs_path }}/ca.pem"
+          -CAkey "{{ certs_path }}/ca-key.pem"
+          -CAcreateserial
+          -out "{{ certs_path }}/server-cert.pem"
+          -extfile "{{ certs_path }}/extfile.cnf"
+      args:
+        creates: "{{ certs_path }}/server-cert.pem"
+
+    - name: Generate client private key
+      ansible.builtin.command:
+        cmd: openssl genrsa -out "{{ certs_path }}/key.pem" 4096
+      args:
+        creates: "{{ certs_path }}/key.pem"
+
+    - name: Generate client certificate signing request
+      ansible.builtin.command:
+        cmd: >
+          openssl req -sha256 -new
+          -subj "/CN=client"
+          -key "{{ certs_path }}/key.pem"
+          -out "{{ certs_path }}/client.csr"
+      args:
+        creates: "{{ certs_path }}/client.csr"
+
+    - name: Generate client certificate extension file
+      ansible.builtin.shell: echo "extendedKeyUsage = clientAuth" > "{{ certs_path }}/client-extfile.cnf"
+      args:
+        creates: "{{ certs_path }}/client-extfile.cnf"
+
+    - name: Generate client certificate
+      ansible.builtin.command:
+        cmd: >
+          openssl x509 -req -days "{{ cert_validity_days }}" -sha256
+          -in "{{ certs_path }}/client.csr"
+          -CA "{{ certs_path }}/ca.pem"
+          -CAkey "{{ certs_path }}/ca-key.pem"
+          -CAcreateserial
+          -out "{{ certs_path }}/cert.pem"
+          -extfile "{{ certs_path }}/client-extfile.cnf"
+      args:
+        creates: "{{ certs_path }}/cert.pem"
+
+    - name: Clean up temporary certificate files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ certs_path }}/server.csr"
+        - "{{ certs_path }}/client.csr"
+        - "{{ certs_path }}/extfile.cnf"
+        - "{{ certs_path }}/client-extfile.cnf"
+
+    - name: Secure certificate directory permissions
+      ansible.builtin.file:
+        path: "{{ certs_path }}"
+        mode: '0700'
+        recurse: true
+        follow: true
