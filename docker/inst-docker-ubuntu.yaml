@@ -1,14 +1,13 @@
 ---
 # 🧩 Playbook: inst-docker-ubuntu.yaml
 # 📘 Description:
-# Installs or updates Docker Engine safely on Ubuntu, avoiding repo/key conflicts.
-# Automatically handles systems with existing Docker installations.
-# Adds a non-root user to the docker group for sudo-free use.
+# Installs or updates Docker Engine safely on Ubuntu, avoiding GPG and repo conflicts.
+# Adds the Ansible SSH user (or a defined user) to the docker group for sudo-free use.
 #
-# 🧩 Works on Ubuntu 20.04, 22.04, 24.04.
+# 🧩 Works on Ubuntu 20.04, 22.04, and 24.04.
 # ⚙️ Requires sudo/root privileges.
 
-- name: Install Docker with conflict handling
+- name: Install or update Docker Engine on Ubuntu
   hosts: "{{ target_group | d([]) }}"
   become: true
   vars:
@@ -21,13 +20,14 @@
       register: docker_installed
       changed_when: false
 
-    - name: Install Docker dependencies
+    - name: Install base dependencies
       ansible.builtin.apt:
         name:
           - apt-transport-https
           - ca-certificates
           - curl
-          - gnupg-agent
+          - gnupg
+          - lsb-release
           - software-properties-common
         update_cache: true
 
@@ -37,17 +37,11 @@
       register: docker_repo_check
       changed_when: false
 
-    - name: Extract existing Signed-By key (if any)
-      ansible.builtin.shell: |
-        grep -oP 'signed-by=\K\S+' /etc/apt/sources.list.d/docker*.list 2>/dev/null | head -n1 || true
-      register: existing_key_path
-      changed_when: false
-
     - name: Debug existing repo info
       ansible.builtin.debug:
         msg: |
           Existing Docker repo: {{ docker_repo_check.stdout | default('none') }}
-          Existing key path: {{ existing_key_path.stdout | default('none') }}
+          Docker already installed: {{ docker_installed.stdout }}
 
     - name: Remove conflicting Docker sources if both .asc and .gpg are found
       ansible.builtin.shell: |
@@ -65,38 +59,36 @@
         state: directory
         mode: '0755'
 
-    - name: Determine which key to use
-      ansible.builtin.set_fact:
-        docker_key_path: "{{ existing_key_path.stdout if existing_key_path.stdout | length > 0 else '/etc/apt/keyrings/docker.gpg' }}"
+    - name: Download and install Docker GPG key (modern method)
+      ansible.builtin.shell: |
+        set -e
+        mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        executable: /bin/bash
 
-    - name: Download Docker GPG key if needed
-      ansible.builtin.get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: "{{ docker_key_path }}"
-        mode: '0644'
-      when: existing_key_path.stdout | length == 0 and docker_installed.stdout == 'no'
-
-    - name: Add Docker repository if missing
+    - name: Add Docker repository (modern syntax)
       ansible.builtin.apt_repository:
         filename: docker
         repo: >
-          deb [arch=amd64 signed-by={{ docker_key_path }}]
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
           https://download.docker.com/linux/ubuntu
           {{ ansible_lsb.codename | lower }} stable
         state: present
-      when: docker_repo_check.stdout | length == 0 and docker_installed.stdout == 'no'
 
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
+        cache_valid_time: 3600
 
-    - name: Install Docker Engine and plugins
+    - name: Install or upgrade Docker Engine and plugins
       ansible.builtin.apt:
         name:
           - docker-ce
           - docker-buildx-plugin
           - docker-compose-plugin
-        state: present
+        state: latest
 
     - name: Ensure Docker service is enabled and running
       ansible.builtin.systemd:
@@ -110,9 +102,9 @@
         groups: docker
         append: true
 
-    - name: Display final status
+    - name: Display summary
       ansible.builtin.debug:
         msg: |
           ✅ Docker installed and configured successfully.
-          🧑 User '{{ docker_user }}' added to Docker group.
-          🔁 You may need to log out and log back in for group changes to apply.
+          🧑 User '{{ docker_user }}' added to the 'docker' group.
+          🔁 Please log out and back in for group membership to take effect.
