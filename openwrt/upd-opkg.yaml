@@ -1,39 +1,42 @@
 ---
-- name: Update and check OpenWrt router
+- name: Update and check OpenWrt router (no Python required)
   hosts: openwrt
-  become: yes
   gather_facts: no
+  become: yes
 
   tasks:
-
     - name: Update package lists
-      ansible.builtin.command: opkg update
+      ansible.builtin.raw: opkg update
       register: update_result
-      changed_when: "'downloaded' in update_result.stdout"
 
     - name: List upgradable packages
-      ansible.builtin.command: opkg list-upgradable
+      ansible.builtin.raw: opkg list-upgradable
       register: upgradable
-      changed_when: upgradable.stdout != ""
 
     - name: Show upgradable packages
-      debug:
+      ansible.builtin.debug:
         msg: "{{ upgradable.stdout_lines | default(['No packages need upgrading.']) }}"
 
-    - name: Upgrade all packages
-      ansible.builtin.command: opkg upgrade
-      when: upgradable.stdout != ""
+    - name: Upgrade all packages if needed
+      ansible.builtin.raw: opkg upgrade
+      when: upgradable.stdout is defined and upgradable.stdout != ""
       register: upgrade_result
-      changed_when: "'upgraded' in upgrade_result.stdout or 'Configuring' in upgrade_result.stdout"
 
-    - name: Check if a reboot is required
-      ansible.builtin.stat:
-        path: /tmp/reboot-required
-      register: reboot_flag
+    - name: Check if reboot is required (based on kernel or libc upgrade)
+      ansible.builtin.set_fact:
+        reboot_needed: "{{ 'libc' in upgradable.stdout or 'kernel' in upgradable.stdout }}"
+      when: upgradable.stdout is defined
 
     - name: Reboot if needed
-      ansible.builtin.reboot:
-        msg: "Rebooting after OpenWrt update"
-        pre_reboot_delay: 3
-        post_reboot_delay: 15
-      when: reboot_flag.stat.exists
+      ansible.builtin.raw: sleep 2 && reboot
+      when: reboot_needed | default(false)
+      async: 0
+      poll: 0
+
+    - name: Wait for router to come back
+      ansible.builtin.wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        delay: 15
+        timeout: 180
+      when: reboot_needed | default(false)
