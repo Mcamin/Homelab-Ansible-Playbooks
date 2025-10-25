@@ -21,7 +21,9 @@
       ansible.builtin.debug:
         msg: "Disk usage on {{ inventory_hostname }}: {{ disk_usage.stdout }}"
 
-
+# Create a bot on telegram using @BotFather, send your bot a message
+# and use the generated token in the link below to get the chat id of your bot
+#https://api.telegram.org/bot<YOUR-BOT-TOKEN>/getUpdates
     - name: Send Telegram alert if disk usage > 80%
       ansible.builtin.uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
