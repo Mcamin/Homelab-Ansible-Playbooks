@@ -1,36 +1,19 @@
 ---
 # 🧩 Playbook: inst-docker-ubuntu.yaml
 # 📘 Description:
-# Installs the latest stable Docker Engine, CLI, and related components on Ubuntu-based systems.
-# The playbook automatically detects existing Docker repository configurations:
-# - If a valid repository already exists, it reuses it.
-# - If no repository is found, it adds the official Docker repository using the modern GPG keyring format.
+# Installs or updates Docker Engine safely on Ubuntu while handling existing
+# Docker repositories that may use different Signed-By keys (.asc or .gpg).
 #
-# 🔧 Notes:
-# - Works on Ubuntu 20.04 (Focal), 22.04 (Jammy), and 24.04 (Noble).
-# - Supports both legacy (`.asc`) and new (`.gpg`) repository keyring formats.
-# - Ensures all required dependencies and Docker packages are installed.
-# - Requires root/sudo privileges.
+# 🧠 Logic:
+# 1. Check if a Docker APT repository exists.
+# 2. If found, reuse its Signed-By key (avoid conflicts).
+# 3. If not found, add the official Docker repo using the modern .gpg key.
+# 4. Clean any conflicting sources to ensure APT consistency.
 #
-# ⚙️ Requirements:
-# - Internet access from the target host.
-# - Supported Ubuntu release with valid `lsb_release -cs` codename.
-#
-# 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./docker/inst-docker-ubuntu.yaml -e "target_group=DockerServers"
-#
-# 🧩 Next steps:
-# - Run `docker_certs.yml` to generate Docker TLS certificates for secure connections.
-# - Optionally enable TLS via `docker_certs_enable.yml` for remote Docker API access.
-#
-# ✅ Installed Components:
-# | Package | Description |
-# |----------|-------------|
-# | `docker-ce` | Docker Engine (core service) |
-# | `docker-buildx-plugin` | Docker BuildKit plugin for advanced builds |
-# | `docker-compose-plugin` | Compose v2 plugin integrated into Docker CLI |
+# 🧩 Works on Ubuntu 20.04, 22.04, and 24.04.
+# ⚙️ Requires sudo/root privileges and internet access.
 
-- name: Install Docker (auto-detect repo)
+- name: Install Docker with repo conflict handling
   hosts: "{{ target_group | d([]) }}"
   become: true
 
@@ -45,42 +28,61 @@
           - software-properties-common
         update_cache: true
 
-    - name: Check if an existing Docker repository is configured
+    - name: Detect existing Docker repository
       ansible.builtin.shell: |
         grep -rh "^deb .*download.docker.com" /etc/apt/sources.list.d /etc/apt/sources.list || true
       register: docker_repo_check
       changed_when: false
 
-    - name: Show existing Docker repo (if found)
+    - name: Extract existing Signed-By key (if any)
+      ansible.builtin.shell: |
+        grep -oP 'signed-by=\K\S+' /etc/apt/sources.list.d/docker*.list 2>/dev/null | head -n1 || true
+      register: existing_key_path
+      changed_when: false
+
+    - name: Debug existing repo info
       ansible.builtin.debug:
-        msg: "Existing Docker repository found: {{ docker_repo_check.stdout_lines }}"
-      when: docker_repo_check.stdout | length > 0
+        msg: |
+          Existing Docker repo: {{ docker_repo_check.stdout | default('none') }}
+          Existing key path: {{ existing_key_path.stdout | default('none') }}
+
+    - name: Remove conflicting Docker sources if both .asc and .gpg are found
+      ansible.builtin.shell: |
+        if grep -q "docker.asc" /etc/apt/sources.list.d/docker*.list 2>/dev/null && \
+           grep -q "docker.gpg" /etc/apt/sources.list.d/docker*.list 2>/dev/null; then
+          rm -f /etc/apt/sources.list.d/docker*.list*
+        fi
+      args:
+        warn: false
 
     - name: Ensure Docker keyrings directory exists
       ansible.builtin.file:
         path: /etc/apt/keyrings
         state: directory
         mode: '0755'
-      when: docker_repo_check.stdout | length == 0
 
-    - name: Add Docker GPG key (only if no existing repo)
+    - name: Determine which key to use
+      ansible.builtin.set_fact:
+        docker_key_path: "{{ existing_key_path.stdout if existing_key_path.stdout | length > 0 else '/etc/apt/keyrings/docker.gpg' }}"
+
+    - name: Download Docker GPG key if needed
       ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.gpg
+        dest: "{{ docker_key_path }}"
         mode: '0644'
-      when: docker_repo_check.stdout | length == 0
+      when: existing_key_path.stdout | length == 0
 
-    - name: Add Docker repository (only if no existing repo)
+    - name: Add Docker repository if missing
       ansible.builtin.apt_repository:
         filename: docker
         repo: >
-          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
+          deb [arch=amd64 signed-by={{ docker_key_path }}]
           https://download.docker.com/linux/ubuntu
           {{ ansible_lsb.codename | lower }} stable
         state: present
-      when: docker_repo_check.stdout | length == 0
+      when: docker_repo_check.stdout | length == 0 or "'download.docker.com' not in docker_repo_check.stdout"
 
-    - name: Update package index
+    - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
 
