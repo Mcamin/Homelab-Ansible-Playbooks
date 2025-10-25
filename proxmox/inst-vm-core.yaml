@@ -24,7 +24,6 @@
     - name: Install packages
       ansible.builtin.apt:
         name:
-          - prometheus-node-exporter
           - nfs-common
           - qemu-guest-agent
         update_cache: true

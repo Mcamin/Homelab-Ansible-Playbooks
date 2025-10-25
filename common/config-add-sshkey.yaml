@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: add_ssh_key.yml
+# 🧩 Playbook: config-add-sshkey.yaml
 # 📘 Description:
 # Adds an SSH public key to the specified user's `~/.ssh/authorized_keys` on target hosts
 # and configures passwordless sudo for the sudo group by adding a dedicated configuration
@@ -14,7 +14,7 @@
 # - Requires sudo/root privileges.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./common/add_ssh_key.yml -e "target_group=UbuntuServers"
+# ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml -e "target_group=UbuntuServers"
 
 - name: Add ssh key
   hosts: "{{ target_group | d('all') }}"

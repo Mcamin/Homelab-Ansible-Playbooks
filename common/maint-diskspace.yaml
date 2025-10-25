@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: check_disk_space.yml
+# 🧩 Playbook: maint-diskspace.yaml
 # 📘 Description:
 # Checks disk space usage on target hosts and sends a Telegram alert if usage exceeds 80%.
 # The playbook runs safely without gathering system facts and supports notification
@@ -14,7 +14,7 @@
 # - The commented-out Discord section shows how to integrate Discord instead.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./common/check_disk_space.yml -e "target_group=UbuntuServers"
+# ansible-playbook -i inventory.ini ./common/maint-diskspace.yaml -e "target_group=UbuntuServers"
 
 - name: Check disk space
   hosts: "{{ target_group | d('all') }}"

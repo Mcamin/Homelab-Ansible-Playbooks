@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: reboot_machine.yml
+# 🧩 Playbook: maint-reboot.yaml
 # 📘 Description:
 # Performs a controlled reboot of one or more target hosts.
 # This playbook uses Ansible’s built-in reboot module to safely restart systems
@@ -12,7 +12,7 @@
 # - Useful after system updates or maintenance tasks that require a restart.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./common/reboot_machine.yml -e "target_group=UbuntuServers"
+# ansible-playbook -i inventory.ini ./common/maint-reboot.yaml -e "target_group=UbuntuServers"
 
 - name: Reboot machine
   hosts: "{{ target_group | d('all') }}"
