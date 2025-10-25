@@ -68,30 +68,38 @@
       register: script_output
       changed_when: true
 
-    # 🟢 Step 4: Send Telegram notification (success)
-    - name: Send Telegram notification (success)
-      community.general.telegram:
-        token: "{{ telegram_bot_token }}"
-        chat_id: "{{ telegram_chat_id }}"
-        msg: |
-          ✅ *Script executed successfully on {{ inventory_hostname }}*
-          📜 Path: `{{ script_path }}`
-          🕒 Time: {{ ansible_date_time.iso8601 }}
-          ---
-          {{ script_output.stdout | default('No output') }}
-        parse_mode: markdown
+   # 🟢 Step 4: Send Telegram message (success)
+    - name: Send Telegram success message via API
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ✅ *Script executed successfully on {{ inventory_hostname }}*
+            📜 Path: `{{ script_path }}`
+            🕒 Time: {{ ansible_date_time.iso8601 }}
+            ---
+            {{ script_output.stdout | default('No output') }}
+          parse_mode: "Markdown"
+        status_code: 200
       when: script_output.rc == 0
 
-    # 🔴 Step 5: Send Telegram notification (failure)
-    - name: Send Telegram notification (failure)
-      community.general.telegram:
-        token: "{{ telegram_bot_token }}"
-        chat_id: "{{ telegram_chat_id }}"
-        msg: |
-          ❌ *Script execution FAILED on {{ inventory_hostname }}*
-          📜 Path: `{{ script_path }}`
-          🕒 Time: {{ ansible_date_time.iso8601 }}
-          ---
-          {{ script_output.stderr | default('No error output') }}
-        parse_mode: markdown
+    # 🔴 Step 5: Send Telegram message (failure)
+    - name: Send Telegram failure message via API
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ❌ *Script execution FAILED on {{ inventory_hostname }}*
+            📜 Path: `{{ script_path }}`
+            🕒 Time: {{ ansible_date_time.iso8601 }}
+            ---
+            {{ script_output.stderr | default('No error output') }}
+          parse_mode: "Markdown"
+        status_code: 200
       when: script_output.rc != 0
