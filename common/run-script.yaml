@@ -1,0 +1,94 @@
+---
+# 🧩 Playbook: run-script.yaml
+# 📘 Description:
+# This playbook connects to one or more remote machines and executes a shell
+# script located at a user-specified path. The `become` (sudo) behavior is
+# controlled dynamically by a variable, allowing the same playbook to be used
+# for both privileged and non-privileged scripts.
+#
+# 🧠 Ideal for:
+# - Executing arbitrary maintenance or setup scripts remotely
+# - Controlling privilege escalation dynamically
+# - Receiving Telegram alerts for success or failure
+#
+# 🧰 Requirements:
+# - community.general collection (install with `ansible-galaxy collection install community.general`)
+# - Telegram bot token and chat ID set in Semaphore or inventory
+#
+# 🧩 Variables:
+#   target_group:          → Target host(s) or inventory group
+#   script_path:       → Full path to the .sh script on the remote host (e.g. /home/ubuntu/Scripts/update.sh)
+#   use_become:        → Whether to use sudo (true/false)
+#   telegram_token:    → Telegram bot token from BotFather
+#   telegram_chat_id:  → Telegram chat ID (user or group)
+#
+# 🧪 Example Variables:
+#   target_group: ["192.168.108.101"]
+#   script_path: "/home/ubuntu/Scripts/backup.sh"
+#   use_become: true
+#   telegram_token: "123456789:ABCdefGhIjKlmNoPqRsTuVwxyz"
+#   telegram_chat_id: "123456789"
+#
+# ✅ Result:
+# - The script executes remotely (with or without sudo)
+# - Output and errors are logged
+# - Telegram message sent on success or failure
+# 🧠 Example usage:
+#  ansible-playbook -i inventory.ini ./common/run-script.yaml -e "target_group=UbuntuServers"
+
+- name: Run remote shell script and send Telegram notification
+  hosts: "{{ target_group | d([]) }}"
+  become: "{{ use_become | default(false) }}"
+  vars:
+    script_path: "{{ script_path }}"
+    telegram_token: "{{ telegram_token }}"
+    telegram_chat_id: "{{ telegram_chat_id }}"
+
+  tasks:
+    # 🔍 Step 1: Verify that the script exists
+    - name: Check if the script exists on remote host
+      ansible.builtin.stat:
+        path: "{{ script_path }}"
+      register: script_status
+
+    # 🚫 Step 2: Stop if the script is missing
+    - name: Fail if script not found
+      ansible.builtin.fail:
+        msg: "Script not found at {{ script_path }}"
+      when: not script_status.stat.exists
+
+    # ▶️ Step 3: Execute the script
+    - name: Run the script
+      ansible.builtin.shell: "bash {{ script_path }}"
+      args:
+        chdir: "{{ script_path | dirname }}"
+      register: script_output
+      changed_when: true
+
+    # 🟢 Step 4: Send Telegram notification (success)
+    - name: Send Telegram notification (success)
+      community.general.telegram:
+        token: "{{ telegram_token }}"
+        chat_id: "{{ telegram_chat_id }}"
+        msg: |
+          ✅ *Script executed successfully on {{ inventory_hostname }}*
+          📜 Path: `{{ script_path }}`
+          🕒 Time: {{ ansible_date_time.iso8601 }}
+          ---
+          {{ script_output.stdout | default('No output') }}
+        parse_mode: markdown
+      when: script_output.rc == 0
+
+    # 🔴 Step 5: Send Telegram notification (failure)
+    - name: Send Telegram notification (failure)
+      community.general.telegram:
+        token: "{{ telegram_token }}"
+        chat_id: "{{ telegram_chat_id }}"
+        msg: |
+          ❌ *Script execution FAILED on {{ inventory_hostname }}*
+          📜 Path: `{{ script_path }}`
+          🕒 Time: {{ ansible_date_time.iso8601 }}
+          ---
+          {{ script_output.stderr | default('No error output') }}
+        parse_mode: markdown
+      when: script_output.rc != 0
