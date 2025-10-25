@@ -8,14 +8,47 @@ Each category targets specific infrastructure components used in a homelab or pr
 ## 📁 Repository Structure
 
 ```
-
 Ansible Playbooks/
-├── ubuntu/
-│   ├── maint-reboot.yaml
+├── .gitignore
+├── README.md
+│
+├── common/
+│   ├── config-add-sshkey.yaml
+│   ├── maint-diskspace.yaml
 │   ├── maint-reboot-required.yaml
-│   └── upd-apt.yaml
-
+│   └── maint-reboot.yaml
+│
+├── docker/
+│   ├── docker-certs-enable.yaml
+│   ├── docker-certs.yaml
+│   ├── inst-docker-ubuntu.yaml
+│   └── maint-docker-clean.yaml
+│
+├── notifications/
+│   ├── notify-discord.yaml
+│   └── notify-telegram.yaml
+│
+├── openwrt/
+│   └── upd-opkg.yaml
+│
+├── proxmox/
+│   └── inst-vm-core.yaml
+│
+└── ubuntu/
+    ├── inst-zsh.yaml
+    └── upd-upgrade-apt.yaml
+    
 ````
+## ✅ Structure Summary
+| Folder                               | Description                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **`common/`**                        | General-purpose system maintenance playbooks — add SSH keys, check disk space, and handle system reboots.                       |
+| **`docker/`**                        | Docker-related playbooks — install Docker, configure TLS certificates, enable secure daemon access, and clean up unused images. |
+| **`notifications/`**                 | Notification integrations — send alerts via Discord or Telegram for system events or playbook results.                          |
+| **`openwrt/`**                       | Playbooks for managing and updating OpenWrt routers (e.g., package updates).                                                    |
+| **`proxmox/`**                       | Tasks related to Proxmox virtual machines — install essential VM agents and monitoring tools.                                   |
+| **`ubuntu/`**                        | Ubuntu host setup and maintenance — install core packages like Zsh and perform system updates/upgrades.                         |
+| **Root (`README.md`, `.gitignore`)** | Project documentation and Git configuration files.                                                                              |
 
 ---
 
