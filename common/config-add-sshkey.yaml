@@ -30,26 +30,13 @@
         key: "{{ lookup('file', ssh_key_path) }}"
         state: present
 
-    # 🧪 Debug: verify escalation
-    - name: Check current effective user and permissions on /etc/sudoers.d
-      become: true
-      ansible.builtin.shell: |
-        echo "Current user: $(whoami)"
-        id
-        ls -ld /etc/sudoers.d
-        test -w /etc/sudoers.d && echo "✅ Writable" || echo "❌ Not writable"
-      register: sudo_debug
 
-    - name: Show debug output
-      ansible.builtin.debug:
-        var: sudo_debug.stdout_lines
 
-    - name: Configure passwordless sudo for this user
-      become: true
-      ansible.builtin.copy:
-        dest: "/etc/sudoers.d/90_{{ ssh_user }}_nopasswd"
-        content: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL\n"
-        owner: root
-        group: root
-        mode: '0440'
-        validate: '/usr/bin/sudo /usr/sbin/visudo -cf %s'
+    - name: Configure passwordless sudo for the specific user in /etc/sudoers
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: "^{{ ssh_user }} "
+        line: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL"
+        validate: '/usr/sbin/visudo -cf %s'
+
