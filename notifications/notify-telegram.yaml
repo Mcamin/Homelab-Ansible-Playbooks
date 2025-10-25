@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: notify_telegram.yml
+# 🧩 Playbook: notify-telegram.yaml
 # 📘 Description:
 # This Ansible playbook demonstrates how to send **Telegram notifications**
 # using the official Telegram Bot API and Ansible’s built-in `uri` module.
@@ -39,7 +39,7 @@
 # Store them as environment variables, encrypted variables, or in your CI/CD secret store.
 #
 # ✅ Example Command:
-# ansible-playbook -i inventory.ini playbooks/common/notify_telegram.yml
+# ansible-playbook -i inventory.ini ./notifications/notify-telegram.yaml
 
 - name: Notify Telegram
   hosts: "{{ my_hosts | d([]) }}"

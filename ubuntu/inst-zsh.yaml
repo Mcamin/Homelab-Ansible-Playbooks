@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: install_zsh.yml
+# 🧩 Playbook: inst-zsh.yaml
 # 📘 Description:
 # Installs the Z Shell (zsh) package on all or selected Ubuntu/Debian-based hosts.
 # Useful for customizing shell environments or setting zsh as the default shell
@@ -11,7 +11,7 @@
 # - Compatible with Debian/Ubuntu systems using `apt`.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./ubuntu/install_zsh.yml -e "target_group=UbuntuServers"
+# ansible-playbook -i inventory.ini ./ubuntu/inst-zsh.yaml -e "target_group=UbuntuServers"
 
 - name: Install zsh
   hosts: "{{ target_group | d('all') }}"

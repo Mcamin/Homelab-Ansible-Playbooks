@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: update_upgrade_apt.yml
+# 🧩 Playbook: upd-upgrade-apt.yaml
 # 📘 Description:
 # Updates and upgrades all packages on Debian/Ubuntu-based systems using the `apt` package manager.
 # The playbook refreshes the package cache and performs a full system upgrade (dist-upgrade),
@@ -13,7 +13,7 @@
 #   if a reboot is needed after the upgrade.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./ubuntu/update_upgrade_apt.yml -e "target_group=UbuntuServers"
+# ansible-playbook -i inventory.ini ./ubuntu/upd-upgrade-apt.yaml -e "target_group=UbuntuServers"
 
 - name: Update and upgrade apt packages
   hosts: "{{ target_group | d('all') }}"

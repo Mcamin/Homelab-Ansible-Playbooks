@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: install_core_vm_packages.yml
+# 🧩 Playbook: inst-vm-core.yaml
 # 📘 Description:
 # Installs essential packages for virtual machines running on Proxmox or other QEMU/KVM-based
 # hypervisors. It includes system monitoring, network file system support, and the QEMU guest
@@ -14,7 +14,7 @@
 # - Compatible with Debian/Ubuntu systems using `apt`.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./proxmox/install_core_vm_packages.yml -e "target_group=VMs"
+# ansible-playbook -i inventory.ini ./proxmox/inst-vm-core.yaml -e "target_group=VMs"
 
 - name: Install core packages for virtual machines
   hosts: "{{ target_group | d('all') }}"

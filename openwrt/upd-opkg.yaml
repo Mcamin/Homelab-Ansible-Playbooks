@@ -1,4 +1,30 @@
 ---
+# 🧩 Playbook: update-opkg.yaml
+# 📘 Description:
+# Updates and upgrades software packages on OpenWrt-based routers using `opkg`.
+# The playbook lists upgradable packages, upgrades them, and checks if a reboot
+# is required (based on whether `libc` or `kernel` packages were updated).
+# It safely reboots the router when needed and waits for it to come back online.
+#
+# 🔧 Notes:
+# - Designed specifically for **OpenWrt routers** using the lightweight `opkg` package manager.
+# - Uses the `raw` module because OpenWrt typically does not include Python by default.
+# - Automatically detects when a reboot is required and triggers it safely.
+# - Waits for SSH (port 22) to become available again after a reboot.
+# - Does not gather facts to avoid Python dependency errors.
+# - Requires SSH access to the router and `become: yes` privileges.
+#
+# ⚙️ Requirements:
+# - Router must allow SSH connections and have `opkg` installed.
+# - The control node (Ansible host) must be able to connect to the router via SSH.
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./openwrt/update-opkg.yaml
+#
+# 🧩 Example inventory entry:
+# [openwrt]
+# 192.168.1.1 ansible_user=root ansible_connection=ssh
+
 - name: Update and check OpenWrt router safely
   hosts: openwrt
   gather_facts: no

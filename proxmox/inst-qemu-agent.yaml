@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: install_qemu_guest_agent.yml
+# 🧩 Playbook: inst-qemu-agent.yaml
 # 📘 Description:
 # Installs the QEMU Guest Agent package on virtual machines to enable communication
 # between the guest OS and its hypervisor (e.g., Proxmox, KVM, or QEMU).
@@ -14,7 +14,7 @@
 #   in the VM’s hardware settings after running this playbook.
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini playbooks/proxmox/install_qemu_guest_agent.yml -e "target_group=VMs"
+# ansible-playbook -i inventory.ini ./proxmox/inst-qemu-agent.yaml-e "target_group=VMs"
 
 - name: Install qemu-guest-agent package
   hosts: "{{ target_group | d('all') }}"
