@@ -1,36 +1,67 @@
 ---
 # 🧩 Playbook: config-add-sshkey.yaml
 # 📘 Description:
-# Adds an SSH public key to the specified user's `~/.ssh/authorized_keys` on target hosts
-# and configures passwordless sudo for the sudo group by adding a dedicated configuration
-# file under `/etc/sudoers.d/`. This approach avoids direct edits to `/etc/sudoers`
-# and provides a safer, more maintainable setup.
+#   Creates (if necessary) a user on target hosts, installs an SSH public key
+#   into that user’s `~/.ssh/authorized_keys`, and grants passwordless sudo access
+#   specifically for that user via a separate configuration file under `/etc/sudoers.d/`.
+#   This ensures secure, key-based access and controlled administrative privileges
+#   for automation or maintenance.
 #
 # 🔧 Notes:
-# - Targets hosts defined by `target_group` (defaults to None).
-# - Uses the current control-machine user (from `USER` environment variable)
-#   as the remote account to which the SSH key will be added.
-# - The public key is read from the local control node file `~/.ssh/id_rsa.pub`.
-# - Requires sudo/root privileges.
+#   - Targets hosts defined by `target_group` (defaults to none).
+#   - Automatically creates the user and home directory if it does not exist.
+#   - Reads the SSH public key from the local control node file `~/.ssh/id_rsa.pub`
+#     (or another file if specified).
+#   - Grants passwordless sudo only for the created or specified user, not for all `sudo` members.
+#   - Requires root privileges (`become: true`).
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml -e "target_group=UbuntuServers"
+#   ansible-playbook -i inventory.ini ./common/config-add-sshkey.yaml \
+#     -e "target_group=UbuntuServers ssh_user=ahmed ssh_key_path=~/.ssh/id_rsa.pub"
+#
+# 🧱 Variables:
+#   - ssh_user: The username to configure (default: ansible)
+#   - ssh_key_path: Path to the public key on the control node (default: ~/.ssh/id_rsa.pub)
+#   - target_group: Inventory group or hosts to apply changes to
 
-- name: Add ssh key
+- name: Configure SSH key and passwordless sudo for a specific user
   hosts: "{{ target_group | d([]) }}"
   become: true
 
-  tasks:
-    - name: Install public key for the user
-      ansible.posix.authorized_key:
-        user: "{{ lookup('env', 'USER') }}"
-        state: present
-        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  vars:
+    ssh_user: "{{ ssh_user | default('ubuntu') }}"
+    ssh_key_path: "{{ ssh_key_path | default('~/.ssh/id_rsa.pub') }}"
 
-    - name: Configure passwordless sudo for the sudo group
+  tasks:
+    # 🧍 Step 1: Ensure user exists
+    - name: Create user if not present
+      ansible.builtin.user:
+        name: "{{ ssh_user }}"
+        state: present
+        create_home: true
+        shell: /bin/bash
+
+    # 📂 Step 2: Ensure .ssh directory exists
+    - name: Create .ssh directory
+      ansible.builtin.file:
+        path: "/home/{{ ssh_user }}/.ssh"
+        state: directory
+        owner: "{{ ssh_user }}"
+        group: "{{ ssh_user }}"
+        mode: "0700"
+
+    # 🔑 Step 3: Install public key for SSH login
+    - name: Install public key for the specified user
+      ansible.posix.authorized_key:
+        user: "{{ ssh_user }}"
+        state: present
+        key: "{{ lookup('file', ssh_key_path) }}"
+
+    # ⚙️ Step 4: Configure passwordless sudo (only for this user)
+    - name: Configure passwordless sudo for the specific user
       ansible.builtin.copy:
-        dest: /etc/sudoers.d/90_ansible_nopasswd
-        content: "%sudo ALL=(ALL) NOPASSWD: ALL\n"
+        dest: "/etc/sudoers.d/90_{{ ssh_user }}_nopasswd"
+        content: "{{ ssh_user }} ALL=(ALL) NOPASSWD: ALL\n"
         owner: root
         group: root
         mode: '0440'

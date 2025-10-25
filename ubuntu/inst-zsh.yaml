@@ -17,11 +17,6 @@
   gather_facts: true
 
   tasks:
-    - name: Fail if target_group is not defined
-      ansible.builtin.fail:
-        msg: "You must specify 'target_group' (e.g., -e 'target_group=UbuntuServers')"
-      when: target_group is not defined
-
     - name: Install zsh
       ansible.builtin.apt:
         name: zsh
