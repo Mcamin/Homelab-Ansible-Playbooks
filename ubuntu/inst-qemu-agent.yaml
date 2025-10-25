@@ -1,6 +1,6 @@
 ---
 - name: Install qemu-guest-agent package
-  hosts: all
+  hosts: "{{ target_group | d('all') }}"
   become: true
   become_method: ansible.builtin.sudo
 
