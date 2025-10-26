@@ -1,0 +1,72 @@
+---
+# 🧩 Playbook: add-hosts.yaml
+# 📘 Description:
+# Creates or ensures the existence of hosts in the Checkmk monitoring system
+# using the official `checkmk.general.host` module.
+#
+# This playbook is intended to be run **before** deploying the Checkmk agent
+# (e.g., via `install-agent.yaml`), ensuring that each target host
+# already exists in Checkmk before TLS registration is attempted.
+#
+# 🔧 Notes:
+# - Runs locally (from the Semaphore or control node), connecting to Checkmk’s REST API.
+# - Automatically creates the host if it does not exist.
+# - You can run this playbook once per new host or loop it over multiple entries.
+# - Requires API access via an automation user with sufficient permissions
+#   to create and modify hosts in Checkmk.
+#
+# ⚙️ Requirements:
+# - The `checkmk.general` Ansible collection must be installed:
+#   ➤ `ansible-galaxy collection install checkmk.general`
+# - The Checkmk monitoring server must be reachable from the control node.
+#
+# 🔒 Secrets:
+# Store these as **Semaphore secrets or variables** instead of plaintext:
+#   - `automation_user`: Checkmk automation account username
+#   - `automation_secret`: Corresponding automation secret or password
+#
+# 🧠 Example usage:
+# ansible-playbook ./monitoring/add-hosts.yaml -e "host_name=myvm ip_address=192.168.1.100"
+#
+# ✅ Example Variables (in Semaphore or vars section):
+# checkmk_agent_server: "checkmk.home.arpa"
+# checkmk_agent_site: "cmk"
+# automation_user: "automation"
+# automation_secret: "xxxxxxxxxxxxxxxx"
+# host_name: "vm1"
+# ip_address: "192.168.1.100"
+#
+# 💡 Tip:
+# - This playbook is used together with `install-agent.yaml`.
+# - Run this one first to ensure the host exists before registering its agent.
+
+- name: "Add or ensure Checkmk host exists"
+  hosts: localhost
+  gather_facts: false
+  become: false
+
+  vars:
+    checkmk_agent_server: "checkmk.home.arpa"
+    checkmk_agent_site: "cmk"
+    checkmk_agent_user: "{{ automation_user }}"
+    checkmk_agent_pass: "{{ automation_secret }}"
+    checkmk_agent_host_name: "{{ ansible_hostname | default('example-host') }}"
+    checkmk_agent_host_ip: "{{ ansible_host | default('192.168.1.100') }}"
+
+  tasks:
+    - name: "Create or update host in Checkmk"
+      checkmk.general.host:
+        server_url: "https://{{ checkmk_agent_server }}"
+        site: "{{ checkmk_agent_site }}"
+        automation_user: "{{ checkmk_agent_user }}"
+        automation_secret: "{{ checkmk_agent_pass }}"
+        name: "{{ checkmk_agent_host_name }}"
+        folder: "/"
+        state: present
+        attributes:
+          ipaddress: "{{ checkmk_agent_host_ip }}"
+      register: create_host_result
+
+    - name: "Show host creation result"
+      ansible.builtin.debug:
+        var: create_host_result
