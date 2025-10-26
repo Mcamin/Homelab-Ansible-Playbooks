@@ -1,5 +1,5 @@
 ---
-# 🧩 Playbook: install_checkmk_agent.yml
+# 🧩 Playbook: install-agent.yaml
 # 📘 Description:
 # Installs and registers the Checkmk Agent on all selected hosts using the official
 # `checkmk.general.agent` role. This enables host monitoring and automatic registration
@@ -26,7 +26,7 @@
 #   - `automation_secret`: Corresponding automation secret or password
 #
 # 🧠 Example usage:
-# ansible-playbook -i inventory.ini ./monitoring/install_checkmk_agent.yml -e "target_group=Servers"
+# ansible-playbook -i inventory.ini ./checkmk/install-agent.yaml -e "target_group=Servers"
 #
 # ✅ Example Variables (in Semaphore or vars section):
 # checkmk_agent_version: "2.4.0p14-1"
