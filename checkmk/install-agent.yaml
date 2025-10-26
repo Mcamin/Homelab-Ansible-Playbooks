@@ -1,0 +1,54 @@
+---
+# 🧩 Playbook: install_checkmk_agent.yml
+# 📘 Description:
+# Installs and registers the Checkmk Agent on all selected hosts using the official
+# `checkmk.general.agent` role. This enables host monitoring and automatic registration
+# with your Checkmk monitoring server.
+#
+# 🔧 Notes:
+# - Designed for hosts managed under Checkmk monitoring.
+# - Supports automatic agent registration and TLS setup.
+# - Expects credentials (automation user + secret) to be provided securely
+#   via **Semaphore Variable Groups or Secrets** — not from a local `vars_files`.
+# - Works with both HTTP and HTTPS Checkmk server protocols.
+# - Automatically activates the host after registration if `checkmk_agent_auto_activate` is true.
+#
+# ⚙️ Requirements:
+# - The `checkmk.general` Ansible collection must be installed:
+#   ➤ `ansible-galaxy collection install checkmk.general`
+# - The Checkmk monitoring server must be reachable from the target hosts.
+#
+# 🔒 Secrets:
+# Store these as **Semaphore secrets or variables** instead of plaintext:
+#   - `automation_user`: Checkmk automation account username
+#   - `automation_secret`: Corresponding automation secret or password
+#
+# 🧠 Example usage:
+# ansible-playbook -i inventory.ini ./monitoring/install_checkmk_agent.yml -e "target_group=Servers"
+#
+# ✅ Example Variables (in Semaphore or vars section):
+# checkmk_agent_version: "2.4.0p14-1"
+# checkmk_agent_server: "checkmk.home.arpa"
+# checkmk_agent_server_protocol: "https"
+# checkmk_agent_site: "cmk"
+# checkmk_agent_auto_activate: true
+# checkmk_agent_tls: true
+# checkmk_agent_user: "{{ automation_user }}"
+# checkmk_agent_pass: "{{ automation_secret }}"
+# checkmk_agent_host_name: "{{ ansible_hostname }}"
+
+- name: Install Checkmk agent on all hosts
+  hosts: "{{ target_group | d([]) }}"
+  roles:
+    - checkmk.general.agent
+
+  vars:
+    checkmk_agent_version: "2.4.0p14-1"
+    checkmk_agent_server: "checkmk.home.arpa" # Change to your checkmk url
+    checkmk_agent_server_protocol: "https"
+    checkmk_agent_site: "cmk" # Change to your checkmk site id
+    checkmk_agent_auto_activate: true
+    checkmk_agent_tls: true
+    checkmk_agent_user: "{{ automation_user }}" # Configure this variable accordingly
+    checkmk_agent_pass: "{{ automation_secret }}" # Configure this variable accordingly
+    checkmk_agent_host_name: "{{ ansible_hostname }}" # Do not change
