@@ -38,23 +38,27 @@
 # checkmk_agent_host_name: "{{ ansible_hostname }}"
 
 
-
-
 - name: Install and debug Checkmk agent registration
   hosts: "{{ target_group | d('all') }}"
   become: true
 
   vars:
-    checkmk_agent_server: "checkmk.home.arpa"
-    checkmk_agent_site: "cmk"
-    checkmk_agent_user: "{{ automation_user }}"
-    checkmk_agent_pass: "{{ automation_secret }}"
-    debug_mode: true  # you can set this to false in Semaphore to skip debug
+    checkmk_agent_version: "2.4.0p14"
+    checkmk_agent_server: "checkmk.home.arpa" # Change to your checkmk url
+    checkmk_agent_server_protocol: "https"
+    checkmk_agent_site: "cmk" # Change to your checkmk site id
+    checkmk_agent_auto_activate: true
+    checkmk_agent_tls: true
+    checkmk_agent_user: "{{ automation_user }}" # Configure this variable accordingly
+    checkmk_agent_pass: "{{ automation_secret }}" # Configure this variable accordingly
+    checkmk_agent_host_name: "{{ ansible_hostname }}" # Do not change
 
   tasks:
     - name: Run Checkmk agent installation role
       ansible.builtin.include_role:
         name: checkmk.general.agent
+      #roles:
+      #  - checkmk.general.agent
 
     - name: Manually register Checkmk agent (debug)
       become: true
@@ -75,3 +79,9 @@
       ansible.builtin.debug:
         var: reg_result.stderr_lines
       when: debug_mode | bool and reg_result is defined
+
+
+
+
+
+
