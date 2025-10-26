@@ -54,9 +54,9 @@
     checkmk_agent_host_name: "{{ ansible_hostname }}" # Do not change
 
   tasks:
-    - name: Run Checkmk agent installation role
-      ansible.builtin.include_role:
-        name: checkmk.general.agent
+    #- name: Run Checkmk agent installation role
+    #  ansible.builtin.include_role:
+    #    name: checkmk.general.agent
       #roles:
       #  - checkmk.general.agent
 
