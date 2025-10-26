@@ -52,6 +52,7 @@
     checkmk_agent_user: "{{ automation_user }}" # Configure this variable accordingly
     checkmk_agent_pass: "{{ automation_secret }}" # Configure this variable accordingly
     checkmk_agent_host_name: "{{ ansible_hostname }}" # Do not change
+    debug_mode: true  # you can set this to false in Semaphore to skip debug
 
   tasks:
     #- name: Run Checkmk agent installation role
