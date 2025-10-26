@@ -118,6 +118,6 @@
     - name: Display summary
       ansible.builtin.debug:
         msg: |
-          ✅ Docker installed and configured successfully.
-          🧑 User '{{ docker_user }}' added to the 'docker' group.
-          🔁 Please log out and back in for group membership to take effect.
+          Docker installed and configured successfully.
+          User '{{ docker_user }}' added to the 'docker' group.
+          Please log out and back in for group membership to take effect.
