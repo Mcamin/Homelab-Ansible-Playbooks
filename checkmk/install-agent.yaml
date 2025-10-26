@@ -43,7 +43,7 @@
     - checkmk.general.agent
 
   vars:
-    checkmk_agent_version: "2.4.0p14-1"
+    checkmk_agent_version: "2.4.0p14"
     checkmk_agent_server: "checkmk.home.arpa" # Change to your checkmk url
     checkmk_agent_server_protocol: "https"
     checkmk_agent_site: "cmk" # Change to your checkmk site id
