@@ -7,11 +7,15 @@
 # 🧩 Works on Ubuntu 20.04, 22.04, and 24.04.
 # ⚙️ Requires sudo/root privileges.
 
+
 - name: Install or update Docker Engine on Ubuntu
   hosts: "{{ target_group | d([]) }}"
   become: true
+
   vars:
     docker_user: "{{ ansible_user | default('ubuntu') }}"
+    docker_key_path: "/etc/apt/keyrings/docker.gpg"
+    docker_repo_file: "/etc/apt/sources.list.d/docker.list"
 
   tasks:
     - name: Check if Docker is already installed
@@ -37,11 +41,17 @@
       register: docker_repo_check
       changed_when: false
 
-    - name: Debug existing repo info
+    - name: Check if Docker GPG key exists
+      ansible.builtin.stat:
+        path: "{{ docker_key_path }}"
+      register: docker_key_check
+
+    - name: Debug current state
       ansible.builtin.debug:
         msg: |
-          Existing Docker repo: {{ docker_repo_check.stdout | default('none') }}
-          Docker already installed: {{ docker_installed.stdout }}
+          🔍 Existing repo: {{ docker_repo_check.stdout | default('none') }}
+          🔐 Key exists: {{ docker_key_check.stat.exists }}
+          🐋 Docker installed: {{ docker_installed.stdout }}
 
     - name: Remove conflicting Docker sources if both .asc and .gpg are found
       ansible.builtin.shell: |
@@ -59,23 +69,26 @@
         state: directory
         mode: '0755'
 
+    # ✅ Only run this if the GPG key is missing
     - name: Download and install Docker GPG key (modern method)
       ansible.builtin.shell: |
         set -e
-        mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        chmod a+r /etc/apt/keyrings/docker.gpg
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o {{ docker_key_path }}
+        chmod a+r {{ docker_key_path }}
       args:
         executable: /bin/bash
+      when: not docker_key_check.stat.exists
 
+    # ✅ Only run this if repo is not already defined
     - name: Add Docker repository (modern syntax)
       ansible.builtin.apt_repository:
         filename: docker
         repo: >
-          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
+          deb [arch=amd64 signed-by={{ docker_key_path }}]
           https://download.docker.com/linux/ubuntu
           {{ ansible_lsb.codename | lower }} stable
         state: present
+      when: docker_repo_check.stdout == ""
 
     - name: Update apt cache
       ansible.builtin.apt:
