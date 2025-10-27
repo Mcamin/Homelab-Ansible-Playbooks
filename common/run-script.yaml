@@ -96,6 +96,15 @@
       ansible.builtin.debug:
         msg: "become whoami -> {{ whoami_become.stdout }}"
 
+    - name: Test sudo non-interactively
+      ansible.builtin.shell: sudo -n true
+      register: sudo_test
+      ignore_errors: true
+      changed_when: false
+
+    - name: Print sudo test exit code
+      ansible.builtin.debug:
+        var: sudo_test.rc
 
 
 #   # 🟢 Step 4: Send Telegram message (success)
