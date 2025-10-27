@@ -81,30 +81,10 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
-            {{ script_output.stdout
-               | default('No output')
-               | replace('\\','\\\\')    # escape backslash first
-               | replace('_','\\_')
-               | replace('*','\\*')
-               | replace('[','\\[')
-               | replace(']','\\]')
-               | replace('(','\\(')
-               | replace(')','\\)')
-               | replace('~','\\~')
-               | replace('`','\\`')
-               | replace('>','\\>')
-               | replace('#','\\#')
-               | replace('+','\\+')
-               | replace('-','\\-')
-               | replace('=','\\=')
-               | replace('|','\\|')
-               | replace('{','\\{')
-               | replace('}','\\}')
-               | replace('.','\\.')
-               | replace('!','\\!')
-            }}
-
-          parse_mode: "MarkdownV2"
+            ```
+             {{ script_output.stdout | default('No output') }}
+            ```
+          parse_mode: "Markdown"
         status_code: 200
       when: script_output.rc == 0
 
@@ -121,28 +101,9 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
-            {{ script_output.stderr
-               | default('No output')
-               | replace('\\','\\\\')    # escape backslash first
-               | replace('_','\\_')
-               | replace('*','\\*')
-               | replace('[','\\[')
-               | replace(']','\\]')
-               | replace('(','\\(')
-               | replace(')','\\)')
-               | replace('~','\\~')
-               | replace('`','\\`')
-               | replace('>','\\>')
-               | replace('#','\\#')
-               | replace('+','\\+')
-               | replace('-','\\-')
-               | replace('=','\\=')
-               | replace('|','\\|')
-               | replace('{','\\{')
-               | replace('}','\\}')
-               | replace('.','\\.')
-               | replace('!','\\!')
-            }}
-          parse_mode: "MarkdownV2"
+            ```
+            {{ script_output.stderr | default('No output') }}
+            ```
+          parse_mode: "Markdown"
         status_code: 200
       when: script_output.rc != 0
