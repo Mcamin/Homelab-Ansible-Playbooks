@@ -69,19 +69,14 @@
       changed_when: true
 
 
-    - name: Debug Telegram message payload
-      ansible.builtin.debug:
-        var: telegram_message
-      vars:
-        telegram_message: |
-          ✅ *Script executed successfully on {{ inventory_hostname }}*
-          📜 Path: `{{ script_path }}`
-          🕒 Time: {{ ansible_date_time.iso8601 }}
-          ---
-          {{ script_output.stdout
-            | regex_replace('([_*\[\]()~`>#+\\=|{}.!-])', '\\\\\\\\\\1')
-            | default('No output') }}
-
+    - name: Show script output
+      ansible.builtin.shell: |
+        echo "===== SCRIPT OUTPUT START ====="
+        echo "{{ script_output.stdout | replace('"', '\\"') }}"
+        echo "===== SCRIPT OUTPUT END ====="
+      args:
+        executable: /bin/bash
+      changed_when: false
 
    # 🟢 Step 4: Send Telegram message (success)
     - name: Send Telegram success message via API
