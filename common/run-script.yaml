@@ -76,15 +76,18 @@
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: |
-            ✅ *Script executed successfully on {{ inventory_hostname }}*
-            📜 Path: `{{ script_path }}`
-            🕒 Time: {{ ansible_date_time.iso8601 }}
-            ---
-            {{ script_output.stdout | regex_replace('([_*\[\]()~`>#+\-=|{}.!])', '\\\\\\1') | default('No output') }}
+          text: >
+            ✅ *Script executed successfully on {{ inventory_hostname }}*\n
+            📜 Path: `{{ script_path }}`\n
+            🕒 Time: {{ ansible_date_time.iso8601 }}\n
+            ---\n
+            {{ script_output.stdout
+              | regex_replace('([_*\[\]()~`>#+\\-=|{}.!])', '\\\\\\\\\\1')
+              | default('No output') }}
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
+
 
 
     # 🔴 Step 5: Send Telegram message (failure)
