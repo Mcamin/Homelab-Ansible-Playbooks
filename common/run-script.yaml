@@ -66,13 +66,7 @@
       args:
         chdir: "{{ script_path | dirname }}"
       register: script_output
-      changed_when: false
-
-    - name: Show script results
-      ansible.builtin.debug:
-        var: script_output
-
-
+      changed_when: true
 
    # 🟢 Step 4: Send Telegram message (success)
     - name: Send Telegram success message via API
@@ -82,20 +76,15 @@
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: >
-            ✅ *Script executed successfully on {{ inventory_hostname }}*\n
-            📜 Path: `{{ script_path }}`\n
-            🕒 Time: {{ ansible_date_time.iso8601 }}\n
-            ---\n
-            {{ script_output.stdout
-              | regex_replace('([_*\[\]()~`>#+\\=|{}.!-])', '\\\\\\\\\\1')
-              | default('No output') }}
+          text: |
+            ✅ *Script executed successfully on {{ inventory_hostname }}*
+            📜 Path: `{{ script_path }}`
+            🕒 Time: {{ ansible_date_time.iso8601 }}
+            ---
+            {{ script_output.stdout | default('No output') }}
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
-
-
-
 
     # 🔴 Step 5: Send Telegram message (failure)
     - name: Send Telegram failure message via API
