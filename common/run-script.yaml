@@ -76,7 +76,7 @@
         echo "===== SCRIPT OUTPUT END ====="
       args:
         executable: /bin/bash
-      changed_when: false
+      #changed_when: false
 
    # 🟢 Step 4: Send Telegram message (success)
     - name: Send Telegram success message via API
