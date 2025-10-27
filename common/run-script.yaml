@@ -68,77 +68,38 @@
       register: script_output
       changed_when: true
 
-    # show how play-level become var is interpreted (important)
-    - name: Show use_become variable and type
-      ansible.builtin.debug:
-        msg:
-          - "use_become raw: {{ use_become | default('undefined') }}"
-          - "use_become | bool: {{ use_become | default(false) | bool }}"
+   # 🟢 Step 4: Send Telegram message (success)
+    - name: Send Telegram success message via API
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ✅ *Script executed successfully on {{ inventory_hostname }}*
+            📜 Path: `{{ script_path }}`
+            🕒 Time: {{ ansible_date_time.iso8601 }}
+            ---
+            {{ script_output.stdout | default('No output') }}
+          parse_mode: "MarkdownV2"
+        status_code: 200
+      when: script_output.rc == 0
 
-    # run whoami without become
-    - name: whoami (no become)
-      ansible.builtin.shell: whoami
-      register: whoami_plain
-      changed_when: false
-
-    - name: Print whoami (no become)
-      ansible.builtin.debug:
-        msg: "plain whoami -> {{ whoami_plain.stdout }}"
-
-    # run whoami with become
-    - name: whoami (with become)
-      ansible.builtin.shell: whoami
-      become: true
-      register: whoami_become
-      changed_when: false
-
-    - name: Print whoami (with become)
-      ansible.builtin.debug:
-        msg: "become whoami -> {{ whoami_become.stdout }}"
-
-    - name: Test sudo non-interactively
-      ansible.builtin.shell: sudo -n true
-      register: sudo_test
-      ignore_errors: true
-      changed_when: false
-
-    - name: Print sudo test exit code
-      ansible.builtin.debug:
-        var: sudo_test.rc
-
-
-#   # 🟢 Step 4: Send Telegram message (success)
-#    - name: Send Telegram success message via API
-#      ansible.builtin.uri:
-#        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-#        method: POST
-#        body_format: json
-#        body:
-#          chat_id: "{{ telegram_chat_id }}"
-#          text: |
-#            ✅ *Script executed successfully on {{ inventory_hostname }}*
-#            📜 Path: `{{ script_path }}`
-#            🕒 Time: {{ ansible_date_time.iso8601 }}
-#            ---
-#            {{ script_output.stdout | default('No output') }}
-#          parse_mode: "MarkdownV2"
-#        status_code: 200
-#      when: script_output.rc == 0
-#
-#    # 🔴 Step 5: Send Telegram message (failure)
-#    - name: Send Telegram failure message via API
-#      ansible.builtin.uri:
-#        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-#        method: POST
-#        body_format: json
-#        body:
-#          chat_id: "{{ telegram_chat_id }}"
-#          text: |
-#            ❌ *Script execution FAILED on {{ inventory_hostname }}*
-#            📜 Path: `{{ script_path }}`
-#            🕒 Time: {{ ansible_date_time.iso8601 }}
-#            ---
-#            {{ script_output.stderr | default('No error output') }}
-#          parse_mode: "Markdown"
-#        status_code: 200
-#      when: script_output.rc != 0
+    # 🔴 Step 5: Send Telegram message (failure)
+    - name: Send Telegram failure message via API
+      ansible.builtin.uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ❌ *Script execution FAILED on {{ inventory_hostname }}*
+            📜 Path: `{{ script_path }}`
+            🕒 Time: {{ ansible_date_time.iso8601 }}
+            ---
+            {{ script_output.stderr | default('No error output') }}
+          parse_mode: "MarkdownV2"
+        status_code: 200
+      when: script_output.rc != 0
