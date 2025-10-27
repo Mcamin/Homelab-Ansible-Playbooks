@@ -81,7 +81,6 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
-            {{ script_output.stdout | default('No output') }}
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
@@ -99,6 +98,7 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
+            {{ script_output.stdout | default('No output') }}
             {{ script_output.stderr | default('No error output') }}
           parse_mode: "MarkdownV2"
         status_code: 200
