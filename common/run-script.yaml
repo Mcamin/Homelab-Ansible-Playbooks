@@ -81,6 +81,29 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
+            {{ script_output.stdout
+               | default('No output')
+               | replace('\\','\\\\')    # escape backslash first
+               | replace('_','\\_')
+               | replace('*','\\*')
+               | replace('[','\\[')
+               | replace(']','\\]')
+               | replace('(','\\(')
+               | replace(')','\\)')
+               | replace('~','\\~')
+               | replace('`','\\`')
+               | replace('>','\\>')
+               | replace('#','\\#')
+               | replace('+','\\+')
+               | replace('-','\\-')
+               | replace('=','\\=')
+               | replace('|','\\|')
+               | replace('{','\\{')
+               | replace('}','\\}')
+               | replace('.','\\.')
+               | replace('!','\\!')
+            }}
+
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
@@ -94,12 +117,32 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            ❌ *Script execution FAILED on {{ inventory_hostname }}*
+            ✅ *Script executed successfully on {{ inventory_hostname }}*
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
-            {{ script_output.stdout | default('No output') }}
-            {{ script_output.stderr | default('No error output') }}
+            {{ script_output.stderr
+               | default('No output')
+               | replace('\\','\\\\')    # escape backslash first
+               | replace('_','\\_')
+               | replace('*','\\*')
+               | replace('[','\\[')
+               | replace(']','\\]')
+               | replace('(','\\(')
+               | replace(')','\\)')
+               | replace('~','\\~')
+               | replace('`','\\`')
+               | replace('>','\\>')
+               | replace('#','\\#')
+               | replace('+','\\+')
+               | replace('-','\\-')
+               | replace('=','\\=')
+               | replace('|','\\|')
+               | replace('{','\\{')
+               | replace('}','\\}')
+               | replace('.','\\.')
+               | replace('!','\\!')
+            }}
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc != 0
