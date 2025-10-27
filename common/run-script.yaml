@@ -66,21 +66,12 @@
       args:
         chdir: "{{ script_path | dirname }}"
       register: script_output
-      changed_when: true
-
-    - name: Always show script output
-      ansible.builtin.shell: |
-        echo "===== SCRIPT OUTPUT START ====="
-        echo "{{ script_output.stdout | default('') | replace('\"', '\\\"') }}"
-        echo "===== SCRIPT STDERR ====="
-        echo "{{ script_output.stderr | default('') | replace('\"', '\\\"') }}"
-        echo "===== SCRIPT OUTPUT END ====="
-      args:
-        executable: /bin/bash
-      register: show_output
       changed_when: false
-      ignore_errors: true
-      when: script_output is defined or script_output is not defined
+
+    - name: Show script results
+      ansible.builtin.debug:
+        var: script_output
+
 
 
    # 🟢 Step 4: Send Telegram message (success)
