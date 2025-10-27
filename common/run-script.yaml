@@ -81,10 +81,11 @@
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
             ---
-            {{ script_output.stdout | default('No output') }}
-          parse_mode: "Markdown"
+            {{ script_output.stdout | regex_replace('([_*\[\]()~`>#+\-=|{}.!])', '\\\\\\1') | default('No output') }}
+          parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
+
 
     # 🔴 Step 5: Send Telegram message (failure)
     - name: Send Telegram failure message via API
