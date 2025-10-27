@@ -82,11 +82,12 @@
             🕒 Time: {{ ansible_date_time.iso8601 }}\n
             ---\n
             {{ script_output.stdout
-              | regex_replace('([_*\[\]()~`>#+\\-=|{}.!])', '\\\\\\\\\\1')
+              | regex_replace('([_*\[\]()~`>#+\\=|{}.!-])', '\\\\\\\\\\1')
               | default('No output') }}
           parse_mode: "MarkdownV2"
         status_code: 200
       when: script_output.rc == 0
+
 
 
 
