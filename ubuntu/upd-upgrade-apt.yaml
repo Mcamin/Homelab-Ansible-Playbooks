@@ -17,7 +17,8 @@
 
 - name: Update and upgrade apt packages
   hosts: "{{ target_group | d('all') }}"
-
+  become: true
+  become_method: sudo
   tasks:
     - name: Update packages with apt
       when: ansible_pkg_mgr == 'apt'

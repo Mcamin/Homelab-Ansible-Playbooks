@@ -80,7 +80,7 @@
             ✅ *Script executed successfully on {{ inventory_hostname }}*
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
-            ---
+ 
             ```
              {{ script_output.stdout | default('No output') }}
             ```
@@ -100,7 +100,6 @@
             ✅ *Script executed successfully on {{ inventory_hostname }}*
             📜 Path: `{{ script_path }}`
             🕒 Time: {{ ansible_date_time.iso8601 }}
-            ---
             ```
             {{ script_output.stderr | default('No output') }}
             ```
