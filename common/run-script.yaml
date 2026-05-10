@@ -44,8 +44,8 @@
   become: "{{ use_become | default(false) }}"
   vars:
     script_path: "{{ script_path }}"
-    telegram_bot_token: "{{ lookup('env', 'SEMAPHORE_TELEGRAM_TOKEN') }}"
-    telegram_chat_id: "{{ lookup('env', 'SEMAPHORE_TELEGRAM_CHAT') }}"
+    telegram_bot_token: "{{ lookup('env', 'TELEGRAM_BOT_TOKEN') }}"
+    telegram_chat_id: "{{ lookup('env', 'TELEGRAM_CHAT_ID') }}"
 
   tasks:
     # 🔍 Step 1: Verify that the script exists
